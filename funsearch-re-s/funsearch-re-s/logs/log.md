@@ -79,3 +79,22 @@ This error may have been caused by the following argument(s):
 在建立了一个三层字典后，还是没能实现，现在仍然停留在传最低一级的字典的层面上，没有找到在哪里改。
 
 就目前跑下来的结果来看（我也上传了几个记录），能有比贪心高的分数，但是都高的不多，基本上在0.1左右，考虑到现在用的数据集总共包含2836个点，可以理解为就多覆盖了2个或3个网格，优势实在是不明显。
+
+在更新完东南亚数据后跑了一轮，有提升（61.2->62.5）,手动测试了中国数据集也有提升（45.8->45.9）,还是那句话，有提升，但不明显。我把那个函数贴在下面。
+```angular2html
+# getting the length of coverage of the last prioritised task in the sorted list as a reference point
+    reference_length = len(sorted_combinations[list(sorted_combinations.keys())[-1]])
+
+    # creating a shortlisted_tasks list to store tasks with coverage length equal to the reference_length
+    shortlisted_tasks = []
+
+    for task, coverage in sorted_combinations.items():
+        if len(coverage) == reference_length:
+            shortlisted_tasks.append(task)
+
+    # sort the shortlisted tasks in ascending order of their id (i.e. task[2])
+    shortlisted_tasks.sort(key=lambda x:x[2])
+
+    # return the first task in the sorted shortlisted tasks
+    return shortlisted_tasks[0]
+```
