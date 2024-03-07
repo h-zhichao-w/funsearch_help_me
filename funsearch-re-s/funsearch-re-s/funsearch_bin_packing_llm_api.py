@@ -9,7 +9,7 @@ from implementation import evaluator_accelerate
 from implementation import evaluator
 from implementation import code_manipulation
 import bin_packing_utils
-from dataset import datasets
+import dataset
 
 import json
 import multiprocessing
@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
     # inputs = [[[3, 8, 5, 10, 13], [13, 10, 1, 6, 8], [9, 1, 5, 3, 7], [4, 1, 2, 0, 3]], [[], [5, 7, 9, 11, 13], [13, 4, 6, 9, 1], [4, 6, 1, 2, 8], [1, 0]], [[], [], [], [5, 3, 0, 2, 4], [2, 7, 11, 4, 0]], [[], [], [], [2, 1, 0, 3], [1, 8, 4, 3, 6]]] 
     #* 这版代码中, inputs 没有用到, 不需要改, 直接改 specification-3.0 中的参数的默认值即可
-    inputs = datasets
+    inputs = dataset.datasets['24hr']['CHN']
 
     class_config = config.ClassConfig(llm_class=LLMAPI, sandbox_class=Sandbox)
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
