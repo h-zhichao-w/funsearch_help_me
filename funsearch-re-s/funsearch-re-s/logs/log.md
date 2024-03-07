@@ -1,6 +1,6 @@
-# Funsearch 工作日志
+# FunSearch 工作日志
 
-## 3月16日
+## 3月6日
 
 重新设置了24小时仿真时间的基础值，用gpt-4跑了20轮，结果保存在`24hr-20-gpt4-030620.txt`，其中比较有意思的是
 
@@ -64,3 +64,14 @@ if not results[0]:
     log.write(f'\n\n')
     log.close()
 ```
+
+## 3月7日
+
+尝试运行api程序报了numba错
+
+```
+This error may have been caused by the following argument(s):
+- argument 0: Cannot determine Numba type of <class 'dict'>
+```
+
+收集了新的数据集，等api程序更新好之后就可以放进dataset中，最终我想要建设一个类似`bin_packing_utils.py`的数据库，在每个数据集前标注好grid point个数和pass num，这样就不用再传数据集路径作为参数了，只需要dataset即可。
