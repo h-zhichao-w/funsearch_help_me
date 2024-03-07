@@ -174,15 +174,19 @@ class Sandbox(evaluator.Sandbox):
             print(f'=====================================================')
             print(f'\n\n')
 
-            if not results[0]:
-                log = open('logs/log-24hr.txt', 'a')
-                log.write(f'================= Evaluated Program =================\n')
-                log.write(f'{function_}\n')
-                log.write(f'-----------------------------------------------------\n')
-                log.write(f'Score: {str(results)}\n')
-                log.write(f'=====================================================\n')
-                log.write(f'\n\n')
-                log.close()
+        if results[0] is not None:
+            program_: code_manipulation.Program = code_manipulation.text_to_program(text=program)
+            func_to_evolve_: str = kwargs.get('func_to_evolve', 'priority')
+            function_: code_manipulation.Function = program_.get_function(func_to_evolve_)
+            function_: str = str(function_).strip('\n')
+            log = open('logs/log-24hr.txt', 'a')
+            log.write(f'================= Evaluated Program =================\n')
+            log.write(f'{function_}\n')
+            log.write(f'-----------------------------------------------------\n')
+            log.write(f'Score: {str(results)}\n')
+            log.write(f'=====================================================\n')
+            log.write(f'\n\n')
+            log.close()
 
         return results
 
