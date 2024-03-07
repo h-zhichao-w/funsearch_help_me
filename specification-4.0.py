@@ -604,8 +604,6 @@ def main(dataset: dict, constraints: list) -> list:
     Main function for task allocation.
 
     Args:
-        sat_num: int, number of the satellites in the system.
-        pass_num: list, number of the passes for each satellite.
         dataset: dict, all the data needed for task allocation, including
             dataset['sat']: int, number of the satellites in the system.
             dataset['pass']: tuple, number of the passes for each satellite.

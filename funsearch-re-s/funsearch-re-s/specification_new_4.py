@@ -7,25 +7,7 @@ import time
 from tqdm import tqdm
 from math import sqrt, radians
 import copy
-import time
-
-
-def get_grid_data(path: str) -> int:
-    """
-    Get the number of the grid points from the given path.
-
-    Args:
-        path: str, path to the grid data.
-
-    Returns:
-        int, number of the grid points.
-
-    """
-    grid_data = pd.read_csv(path + 'grid point.csv')
-    grid_data = grid_data[['Latitude (deg)', 'Longitude (deg)', 'Area (km^2)']]
-    grid_data = grid_data.sort_values(by=['Latitude (deg)', 'Longitude (deg)'], ascending=True)
-    grid_data = np.array(grid_data)
-    return grid_data.shape[0]
+from dataset import datasets
 
 
 @funsearch.evolve
@@ -68,14 +50,16 @@ def update_total_coverage(selected_task: tuple, sorted_combination: dict) -> dic
     return sorted_combination
 
 
-def main(sat_num: int, pass_num: list, sorted_combinations: dict, constraints: list) -> list:
+def main(dataset: dict, constraints: list) -> list:
     """
     Main function for task allocation.
 
     Args:
-        sat_num: int, number of the satellites in the system.
-        pass_num: list, number of the passes for each satellite.
-        sorted_combinations: dict, sorted combinations of task id and its coverage. The key is a tuple, in the format of [index of satellite, index of pass, index of task], and the value is a tuple, containing the indices of points that can be covered by the task. The tuple is likely to be empty, and if so, it means that the corresponding task cannot cover any point. The dict is sorted in ascending order on the number of points that can be covered.
+        dataset: dict, all the data needed for task allocation, including
+            dataset['sat']: int, number of the satellites in the system.
+            dataset['pass']: tuple, number of the passes for each satellite.
+            dataset['points']: int, number of grid points in the given area.
+            dataset['tasks']: dict, sorted combinations of task id and its coverage. The key is a tuple, in the format of [index of satellite, index of pass, index of task], and the value is a tuple, containing the indices of points that can be covered by the task. The tuple is likely to be empty, and if so, it means that the corresponding task cannot cover any point. The dict is sorted in ascending order on the number of points that can be covered.
         constraints: list, constraints for task allocation, containing maximum accumulated working time
         per pass, maximum working time per image, minimum working time per image, and maximum image per pass.
 
@@ -87,6 +71,10 @@ def main(sat_num: int, pass_num: list, sorted_combinations: dict, constraints: l
     max_time_per_image = constraints[1]
     min_time_per_image = constraints[2]
     max_image_per_pass = constraints[3]
+
+    sat_num = dataset['sat']
+    pass_num = dataset['pass']
+    sorted_combinations = dataset['tasks']
 
     # Initialization
     final_schedule = [[] for _ in range(sat_num)]  # Record assigned tasks
@@ -120,20 +108,18 @@ def main(sat_num: int, pass_num: list, sorted_combinations: dict, constraints: l
 
 @funsearch.run
 def evaluator(
-        sorted_combinations: dict,
-        path: str = 'D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-6hr\\',
-        sat_num: int = 4,
-        pass_num: list = [16, 17, 17, 17],
+        dataset: dict = datasets,
         constraints: list = [300, 60, 10, 5],
     ) -> float:
     """
     Evaluation function for the algorthm of task allocation.
 
     Args:
-        sorted_combinations: dict, sorted combinations of task id and its coverage. The key is a tuple, in the format of [index of satellite, index of pass, index of task], and the value is a tuple, containing the indices of points that can be covered by the task. The tuple is likely to be empty, and if so, it means that the corresponding task cannot cover any point. The dict is sorted in ascending order on the number of points that can be covered.
-        path: str, path to the grid data.
-        sat_num: int, number of the satellites in the system.
-        pass_num: list, number of the passes for each satellite.
+        dataset: dict, all the data needed for task allocation, including
+            dataset['sat']: int, number of the satellites in the system.
+            dataset['pass']: tuple, number of the passes for each satellite.
+            dataset['points']: int, number of grid points in the given area.
+            dataset['tasks']: dict, sorted combinations of task id and its coverage. The key is a tuple, in the format of [index of satellite, index of pass, index of task], and the value is a tuple, containing the indices of points that can be covered by the task. The tuple is likely to be empty, and if so, it means that the corresponding task cannot cover any point. The dict is sorted in ascending order on the number of points that can be covered.
         constraints: list, constraints for task allocation, containing maximum accumulated working time
         per pass, maximum working time per image, minimum working time per image, and maximum image per pass.
 
@@ -146,6 +132,11 @@ def evaluator(
     max_time_per_image = constraints[1]
     min_time_per_image = constraints[2]
     max_image_per_pass = constraints[3]
+
+    sat_num = dataset['sat']
+    pass_num = dataset['pass']
+    sorted_combinations = dataset['tasks']
+    num_grid_points = dataset['points']
 
     # Initialization
     final_schedule = [[] for _ in range(sat_num)]  # Record assigned tasks
@@ -190,7 +181,6 @@ def evaluator(
     num_covered_points = len(covered_points)
     # Coverage level in percentage
 
-    num_grid_points = get_grid_data(path)
     coverage_level = num_covered_points / num_grid_points * 100
 
     return coverage_level
