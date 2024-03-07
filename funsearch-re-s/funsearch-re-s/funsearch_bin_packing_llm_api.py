@@ -9,6 +9,7 @@ from implementation import evaluator_accelerate
 from implementation import evaluator
 from implementation import code_manipulation
 import bin_packing_utils
+from dataset import datasets
 
 import json
 import multiprocessing
@@ -113,7 +114,7 @@ class Sandbox(evaluator.Sandbox):
     2) stops the execution of the code in time (avoid endless loop).
     """
 
-    def __init__(self, verbose=False, numba_accelerate=True):
+    def __init__(self, verbose=False, numba_accelerate=False):
         """
         Args:
             verbose         : Print evaluate information.
@@ -170,6 +171,16 @@ class Sandbox(evaluator.Sandbox):
             print(f'=====================================================')
             print(f'\n\n')
 
+            if not results[0]:
+                log = open('logs/log-24hr.txt', 'a')
+                log.write(f'================= Evaluated Program =================\n')
+                log.write(f'{function_}\n')
+                log.write(f'-----------------------------------------------------\n')
+                log.write(f'Score: {str(results)}\n')
+                log.write(f'=====================================================\n')
+                log.write(f'\n\n')
+                log.close()
+
         return results
 
     def _compile_and_run_function(self, program, function_to_run, function_to_evolve, dataset, numba_accelerate,
@@ -188,8 +199,8 @@ class Sandbox(evaluator.Sandbox):
             # get the pointer of 'function_to_run'
             function_to_run = all_globals_namespace[function_to_run]
             # return the execution results
-            # results = function_to_run(dataset)
-            results = function_to_run()
+            results = function_to_run(dataset)
+            # results = function_to_run()
             # the results must be int or float
             if not isinstance(results, (int, float)):
                 result_queue.put((None, False))
@@ -206,12 +217,12 @@ class Sandbox(evaluator.Sandbox):
 if __name__ == '__main__':
 
     #* 读取 specification.py 文件
-    with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_3.py') as f:
+    with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
         specification2 = f.read()
 
     # inputs = [[[3, 8, 5, 10, 13], [13, 10, 1, 6, 8], [9, 1, 5, 3, 7], [4, 1, 2, 0, 3]], [[], [5, 7, 9, 11, 13], [13, 4, 6, 9, 1], [4, 6, 1, 2, 8], [1, 0]], [[], [], [], [5, 3, 0, 2, 4], [2, 7, 11, 4, 0]], [[], [], [], [2, 1, 0, 3], [1, 8, 4, 3, 6]]] 
     #* 这版代码中, inputs 没有用到, 不需要改, 直接改 specification-3.0 中的参数的默认值即可
-    inputs = ['D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-24hr\\']
+    inputs = datasets
 
     class_config = config.ClassConfig(llm_class=LLMAPI, sandbox_class=Sandbox)
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
@@ -227,4 +238,3 @@ if __name__ == '__main__':
         log_dir='logs/funsearch_llm_api',
     )
 
-    log.close()

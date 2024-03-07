@@ -120,7 +120,7 @@ def main(sat_num: int, pass_num: list, sorted_combinations: dict, constraints: l
 
 @funsearch.run
 def evaluator(
-        sorted_combinations: dict = datasets,
+        sorted_combinations: dict,
         path: str = 'D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-6hr\\',
         sat_num: int = 4,
         pass_num: list = [16, 17, 17, 17],
