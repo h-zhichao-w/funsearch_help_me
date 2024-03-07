@@ -618,8 +618,6 @@ def update_total_coverage(selected_task: tuple, sorted_combination: dict) -> dic
     return sorted_combination
 
 
-
-
 def main(sat_num: int, pass_num: list, sorted_combinations: dict, constraints: list) -> list:
     """
     Main function for task allocation.
