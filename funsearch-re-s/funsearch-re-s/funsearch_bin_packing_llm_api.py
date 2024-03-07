@@ -75,11 +75,11 @@ class LLMAPI(sampler.LLM):
         prompt = '\n'.join([content, self._additional_prompt])
         while True:
             try:
-                conn = http.client.HTTPSConnection("www.jcapikey.com")
-                # conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
+                # conn = http.client.HTTPSConnection("www.jcapikey.com")
+                conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
                 payload = json.dumps({
                     "max_tokens": 1024,
-                    "model": "gpt-4",
+                    "model": "gpt-3.5-turbo",
                     "messages": [
                         {
                             "role": "user",
@@ -88,8 +88,8 @@ class LLMAPI(sampler.LLM):
                     ]
                 })
                 headers = {
-                    # 'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
-                    'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
+                    'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
+                    # 'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
                     'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
                     'Content-Type': 'application/json'
                 }
@@ -103,6 +103,9 @@ class LLMAPI(sampler.LLM):
                     response = _trim_preface_of_body(response)
                 return response
             except Exception as e:      #* 这里如果没有成功通信, 比如 key 输错了, 则会进入死循环
+                print("When in LLMAPI, there comes an error:", e)
+                if data is not None:
+                    print("The response from server is:", data)
                 continue
 
 
@@ -217,7 +220,7 @@ class Sandbox(evaluator.Sandbox):
 if __name__ == '__main__':
 
     #* 读取 specification.py 文件
-    with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
+    with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_4.py') as f:
         specification2 = f.read()
 
     # inputs = [[[3, 8, 5, 10, 13], [13, 10, 1, 6, 8], [9, 1, 5, 3, 7], [4, 1, 2, 0, 3]], [[], [5, 7, 9, 11, 13], [13, 4, 6, 9, 1], [4, 6, 1, 2, 8], [1, 0]], [[], [], [], [5, 3, 0, 2, 4], [2, 7, 11, 4, 0]], [[], [], [], [2, 1, 0, 3], [1, 8, 4, 3, 6]]] 
