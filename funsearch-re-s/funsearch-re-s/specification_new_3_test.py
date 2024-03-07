@@ -306,27 +306,31 @@ def priority(sorted_combinations: list) -> tuple[tuple[int, int, int], int]:
 
     """
 
-    max_satellite_index = -1
-    max_pass_index = -1
-    max_task_index = -1
-    max_coverage = -1
+    for i in range(len(sorted_combinations) - 1, -1, -1):
+        # get the current combination
+        curr_combination = sorted_combinations[i]
+        # get the current task's point
+        curr_points = curr_combination[1]
+        # get the current task's satellite, pass, and task index
+        curr_satellite_index, curr_pass_index, curr_task_index = curr_combination[0]
 
-    for idx, comb in enumerate(sorted_combinations):
-        sat_idx, pass_idx, task_idx = comb[0]
-        coverage = comb[1]
+        if i != 0 and curr_points == sorted_combinations[i - 1][1]:
+            # get the indices of the previous task
+            prev_satellite_index, prev_pass_index, prev_task_index = sorted_combinations[i - 1][0]
+            # prioritize based on satellite index
+            if curr_satellite_index < prev_satellite_index:
+                return sorted_combinations.pop(i)
+            # if satellite index is same, prioritize based on pass index
+            elif curr_satellite_index == prev_satellite_index and curr_pass_index < prev_pass_index:
+                return sorted_combinations.pop(i)
+            # if both satellite and pass index is same, prioritize based on task index
+            elif curr_satellite_index == prev_satellite_index and curr_pass_index == prev_pass_index and curr_task_index < prev_task_index:
+                return sorted_combinations.pop(i)
+        else:
+            return sorted_combinations.pop(i)
 
-        if coverage > max_coverage:
-            max_satellite_index = sat_idx
-            max_pass_index = pass_idx
-            max_task_index = task_idx
-            max_coverage = coverage
-
-    if max_satellite_index != -1:
-        for idx, comb in enumerate(sorted_combinations):
-            sat_idx, pass_idx, task_idx = comb[0]
-            coverage = comb[1]
-            if sat_idx == max_satellite_index and pass_idx == max_pass_index and task_idx == max_task_index:
-                return sorted_combinations.pop(idx)
+        # return the last task if all tasks have been iterated through
+    return sorted_combinations.pop(0)
 
 def update_total_coverage(sat_num: int, pass_num: list, task_cover_point: list, new_covered_points: set) -> dict:
     """
@@ -535,7 +539,7 @@ sat_num = 4
 
 if __name__ == '__main__':
     print(get_start_time('2024/1/16  21:00:00'))
-    sat_task_selected = main(path='D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-6hr\\', sat_num=sat_num, half_cone_angle=half_cone_angle, constraints=constraints, time_step=time_step, start_time=start_time_6hr)
+    sat_task_selected = main(path='D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-12hr\\', sat_num=sat_num, half_cone_angle=half_cone_angle, constraints=constraints, time_step=time_step, start_time=start_time_12hr)
     print(sat_task_selected)
-    coverage_level = evaluator(path='D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-6hr\\', sat_num=sat_num, half_cone_angle=half_cone_angle, constraints=constraints, time_step=time_step, start_time=start_time_6hr)
+    coverage_level = evaluator(path='D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\Simulation Data\\Simulation Time-12hr\\', sat_num=sat_num, half_cone_angle=half_cone_angle, constraints=constraints, time_step=time_step, start_time=start_time_12hr)
     print(coverage_level)

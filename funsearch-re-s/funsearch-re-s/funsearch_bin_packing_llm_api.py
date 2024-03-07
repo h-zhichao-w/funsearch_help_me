@@ -171,15 +171,6 @@ class Sandbox(evaluator.Sandbox):
             print(f'=====================================================')
             print(f'\n\n')
 
-            if not results[0]:
-                log = open('logs/log-24hr.txt', 'a')
-                log.write(f'================= Evaluated Program =================\n')
-                log.write(f'{function_}\n')
-                log.write(f'-----------------------------------------------------\n')
-                log.write(f'Score: {str(results)}\n')
-                log.write(f'=====================================================\n')
-                log.write(f'\n\n')
-                log.close()
 
         return results
 

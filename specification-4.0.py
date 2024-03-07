@@ -753,6 +753,7 @@ def get_start_time(
     start_time = time.mktime(time_array)
     return int(start_time)
 
+
 if __name__ == '__main__':
     start_time_24hr = 1709661600
     start_time_12hr = 1705428000
