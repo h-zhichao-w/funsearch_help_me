@@ -10,7 +10,6 @@ import copy
 import dataset
 
 
-@funsearch.evolve
 def priority(sorted_combinations: dict) -> tuple[int, int, int]:
     """
     Get the combination of task id and its coverage that that should be prioritised from the sorted combinations,
@@ -106,9 +105,9 @@ def main(dataset: dict, constraints: list) -> list:
 
     return final_schedule
 
-@funsearch.run
+
 def evaluator(
-        dataset: dict = dataset.datasets['24hr']['CHN'],
+        dataset: dict,
         constraints: list = [300, 60, 10, 5],
     ) -> float:
     """
@@ -184,3 +183,15 @@ def evaluator(
     coverage_level = num_covered_points / num_grid_points * 100
 
     return coverage_level
+
+
+if __name__ == '__main__':
+    constraints = [300, 60, 10, 5]
+    t1 = time.time()
+    sat_task_selected = main(dataset=dataset.datasets['24hr']['CHN'], constraints=constraints)
+    print(sat_task_selected)
+    print('Planning time:', time.time() - t1)
+    t2 = time.time()
+    coverage_level = evaluator(dataset=dataset.datasets['24hr']['CHN'])
+    print(coverage_level)
+    print('Evaluation time:', time.time() - t2)
