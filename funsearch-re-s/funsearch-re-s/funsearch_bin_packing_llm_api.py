@@ -252,11 +252,13 @@ if __name__ == '__main__':
 
     if True:
         # 绘制 scores_list 折线, 并在最高点处画一条水平虚线作为参考线
-        plt.plot(scores_list)
-        plt.axhline(y=(scores_list[0]), color='r', linestyle='--')
+        plt.plot(scores_list, label='FunSearch')
+        plt.axhline(y=(scores_list[0]), color='r', linestyle='--', label='Baseline')
+        plt.axhline(y=(max(scores_list)), color='g', linestyle='--', label='Best of all')
         plt.title('Scores of the generated programs')
         plt.xlabel('Sample Number')
         plt.ylabel('Score')
+        plt.legend()
         plt.savefig(f'logs/scores_list_{time_stamp}.png')
         plt.show()
 

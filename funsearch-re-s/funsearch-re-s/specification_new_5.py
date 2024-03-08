@@ -26,7 +26,7 @@ def priority(sorted_combinations: dict) -> tuple[int, int, int]:
 
     """
 
-    return list(sorted_combinations.keys())[-1]
+    return 0
 
 
 def update_total_coverage(selected_task: tuple, sorted_combination: dict) -> dict:
@@ -85,7 +85,10 @@ def main(dataset: dict, constraints: list) -> list:
     # Greedy algorithm
     covered_points = set()  # Record the points that have been covered
     while sorted_combinations:
-        (sat_idx, pass_idx, task_idx) = priority(sorted_combinations)
+        try:
+            (sat_idx, pass_idx, task_idx) = priority(sorted_combinations)
+        except:
+            (sat_idx, pass_idx, task_idx) = sorted(sorted_combinations.keys())[0]
         if len(sorted_combinations[(sat_idx, pass_idx, task_idx)]) <= 0:
             break
         task_points = sorted_combinations[(sat_idx, pass_idx, task_idx)]
@@ -155,7 +158,10 @@ def evaluator(
         # Greedy algorithm
         covered_points = set()  # Record the points that have been covered
         while sorted_combinations:
-            (sat_idx, pass_idx, task_idx) = priority(sorted_combinations)
+            try:
+                (sat_idx, pass_idx, task_idx) = priority(sorted_combinations)
+            except:
+                (sat_idx, pass_idx, task_idx) = sorted(sorted_combinations.keys())[0]
             if len(sorted_combinations[(sat_idx, pass_idx, task_idx)]) <= 0:
                 break
             task_points = sorted_combinations[(sat_idx, pass_idx, task_idx)]
