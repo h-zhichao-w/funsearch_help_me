@@ -231,7 +231,7 @@ if __name__ == '__main__':
 
     #* 读取 specification.py 文件
     # with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
-    with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_4.py') as f:    
+    with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_5.py') as f:    
         specification2 = f.read()
 
     # inputs = dataset.datasets['24hr']['CHN']
