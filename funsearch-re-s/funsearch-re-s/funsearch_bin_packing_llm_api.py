@@ -17,6 +17,12 @@ from typing import Collection, Any
 import http.client
 from implementation import sampler
 
+import matplotlib.pyplot as plt 
+import time
+
+scores_list = []
+time_stamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+log_with_program_path = f'logs/log-24hr-{time_stamp}.txt'
 
 def _trim_preface_of_body(sample: str) -> str:
     """Trim the redundant descriptions/symbols/'def' declaration before the function body.
@@ -75,11 +81,11 @@ class LLMAPI(sampler.LLM):
         prompt = '\n'.join([content, self._additional_prompt])
         while True:
             try:
-                conn = http.client.HTTPSConnection("www.jcapikey.com")
-                # conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
+                # conn = http.client.HTTPSConnection("www.jcapikey.com")
+                conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
                 payload = json.dumps({
                     "max_tokens": 1024,
-                    "model": "gpt-4",
+                    "model": "gpt-3.5-turbo",
                     "messages": [
                         {
                             "role": "user",
@@ -88,8 +94,8 @@ class LLMAPI(sampler.LLM):
                     ]
                 })
                 headers = {
-                    # 'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
-                    'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
+                    'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
+                    # 'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
                     'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
                     'Content-Type': 'application/json'
                 }
@@ -171,6 +177,22 @@ class Sandbox(evaluator.Sandbox):
             print(f'=====================================================')
             print(f'\n\n')
 
+        if results[0] is not None:
+            program_: code_manipulation.Program = code_manipulation.text_to_program(text=program)
+            func_to_evolve_: str = kwargs.get('func_to_evolve', 'priority')
+            function_: code_manipulation.Function = program_.get_function(func_to_evolve_)
+            function_: str = str(function_).strip('\n')
+            log = open(log_with_program_path, 'a')
+            log.write(f'================= Evaluated Program =================\n')
+            log.write(f'{function_}\n')
+            log.write(f'-----------------------------------------------------\n')
+            log.write(f'Score: {str(results)}\n')
+            log.write(f'=====================================================\n')
+            log.write(f'\n\n')
+            log.close()
+            scores_list.append(results[0])
+        else:
+            scores_list.append(0)
 
         return results
 
@@ -208,18 +230,17 @@ class Sandbox(evaluator.Sandbox):
 if __name__ == '__main__':
 
     #* 读取 specification.py 文件
-    with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
+    # with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
+    with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_4.py') as f:    
         specification2 = f.read()
 
-    # inputs = [[[3, 8, 5, 10, 13], [13, 10, 1, 6, 8], [9, 1, 5, 3, 7], [4, 1, 2, 0, 3]], [[], [5, 7, 9, 11, 13], [13, 4, 6, 9, 1], [4, 6, 1, 2, 8], [1, 0]], [[], [], [], [5, 3, 0, 2, 4], [2, 7, 11, 4, 0]], [[], [], [], [2, 1, 0, 3], [1, 8, 4, 3, 6]]] 
-    #* 这版代码中, inputs 没有用到, 不需要改, 直接改 specification-3.0 中的参数的默认值即可
     inputs = dataset.datasets['24hr']['CHN']
 
     class_config = config.ClassConfig(llm_class=LLMAPI, sandbox_class=Sandbox)
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
 
     # bin_packing_or3 = {'OR3': bin_packing_utils.datasets['OR3']}
-    global_max_sample_num = 20  # if it is set to None, funsearch will execute an endless loop
+    global_max_sample_num = 15  # if it is set to None, funsearch will execute an endless loop
     funsearch.main(
         specification=specification2,
         inputs=inputs,
@@ -228,4 +249,15 @@ if __name__ == '__main__':
         class_config=class_config,
         log_dir='logs/funsearch_llm_api',
     )
+
+    if True:
+        plt.plot(scores_list)
+        plt.title('Scores of the generated programs')
+        plt.xlabel('Sample Number')
+        plt.ylabel('Score')
+        plt.savefig(f'logs/scores_list_{time_stamp}.png')
+        plt.show()
+
+
+    
 
