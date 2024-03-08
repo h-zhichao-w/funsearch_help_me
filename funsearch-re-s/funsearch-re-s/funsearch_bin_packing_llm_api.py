@@ -146,7 +146,7 @@ class Sandbox(evaluator.Sandbox):
         the output of this function is the score of a given program.
         RZ: PLEASE NOTE THAT this SandBox is only designed for bin-packing problem.
         """
-        dataset = inputs
+        dataset = inputs[test_input]
         result_queue = multiprocessing.Queue()
         process = multiprocessing.Process(
             target=self._compile_and_run_function,
@@ -234,7 +234,8 @@ if __name__ == '__main__':
     with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_4.py') as f:    
         specification2 = f.read()
 
-    inputs = dataset.datasets['24hr']['CHN']
+    # inputs = dataset.datasets['24hr']['CHN']
+    inputs = {'24hr': dataset.datasets['24hr']}
 
     class_config = config.ClassConfig(llm_class=LLMAPI, sandbox_class=Sandbox)
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
