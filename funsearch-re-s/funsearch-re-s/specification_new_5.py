@@ -108,7 +108,7 @@ def main(dataset: dict, constraints: list) -> list:
 
 @funsearch.run
 def evaluator(
-        datasets: dict = dataset.datasets['24hr']['CHN'],        #* 现在这里的默认值应该是 dataset.datasets['24hr']
+        datasets: dict = dataset.datasets['24hr'],
         constraints: list = [300, 60, 10, 5],
     ) -> float:
     """
@@ -133,16 +133,16 @@ def evaluator(
     min_time_per_image = constraints[2]
     max_image_per_pass = constraints[3]
 
-    for name in datasets:
+    optimized = []
 
-        if name != 'CHN':
-            break
+    for name in datasets:
 
         dataset_instance = datasets[name]
         sat_num = dataset_instance['sat']
         pass_num = dataset_instance['pass']
         sorted_combinations = dataset_instance['tasks']
         num_grid_points = dataset_instance['points']
+        baseline = dataset_instance['baseline']
 
         # Initialization
         final_schedule = [[] for _ in range(sat_num)]  # Record assigned tasks
@@ -189,4 +189,8 @@ def evaluator(
 
         coverage_level = num_covered_points / num_grid_points * 100
 
-    return coverage_level
+        # optimized.append(num_covered_points - baseline)
+
+        optimized.append(coverage_level - baseline)
+
+    return np.mean(optimized)

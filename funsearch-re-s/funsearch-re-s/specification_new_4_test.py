@@ -188,10 +188,10 @@ def evaluator(
 if __name__ == '__main__':
     constraints = [300, 60, 10, 5]
     t1 = time.time()
-    sat_task_selected = main(dataset=dataset.datasets['24hr']['CHN'], constraints=constraints)
+    sat_task_selected = main(dataset=dataset.datasets['24hr']['SEA'], constraints=constraints)
     print(sat_task_selected)
     print('Planning time:', time.time() - t1)
     t2 = time.time()
-    coverage_level = evaluator(dataset=dataset.datasets['24hr']['CHN'])
+    coverage_level = evaluator(dataset=dataset.datasets['24hr']['SEA'])
     print(coverage_level)
     print('Evaluation time:', time.time() - t2)

@@ -98,3 +98,11 @@ This error may have been caused by the following argument(s):
     # return the first task in the sorted shortlisted tasks
     return shortlisted_tasks[0]
 ```
+
+## 3月9日
+
+目前采用的方法还是把每个数据集的baseline也写进去，将生成的算法能达到的覆盖率和baseline的覆盖率积做对比，保存这个差值，最后求平均返回。
+
+但是这样会有一个小问题就是，在绘图的时候看不出来到底是没优化（返回值是0）还是是None，而且就算返回值是正数，也不代表对两个数据集都有优化。
+
+00-11-45跑的那次结果是比较理想的，有高出baseline的输出。

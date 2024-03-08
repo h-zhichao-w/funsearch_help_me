@@ -81,11 +81,11 @@ class LLMAPI(sampler.LLM):
         prompt = '\n'.join([content, self._additional_prompt])
         while True:
             try:
-                # conn = http.client.HTTPSConnection("www.jcapikey.com")
-                conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
+                conn = http.client.HTTPSConnection("www.jcapikey.com")
+                # conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
                 payload = json.dumps({
                     "max_tokens": 1024,
-                    "model": "gpt-3.5-turbo",
+                    "model": "gpt-4",
                     "messages": [
                         {
                             "role": "user",
@@ -94,8 +94,8 @@ class LLMAPI(sampler.LLM):
                     ]
                 })
                 headers = {
-                    'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
-                    # 'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
+                    # 'Authorization': 'Bearer sk-Dtq4Jt0VxwIHMi3QtTcMANiBxuOH0OKZbjKNAao41aRStRz3',
+                    'Authorization': 'Bearer sk-CYLL2v3Eu2TxwuQE3807E9293a484024947745D2A213CfD2',
                     'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
                     'Content-Type': 'application/json'
                 }
@@ -186,7 +186,7 @@ class Sandbox(evaluator.Sandbox):
             log.write(f'================= Evaluated Program =================\n')
             log.write(f'{function_}\n')
             log.write(f'-----------------------------------------------------\n')
-            log.write(f'Score: {str(results)}\n')
+            log.write(f'Score: {str(results[0])}\n')
             log.write(f'=====================================================\n')
             log.write(f'\n\n')
             log.close()
@@ -230,18 +230,17 @@ class Sandbox(evaluator.Sandbox):
 if __name__ == '__main__':
 
     #* 读取 specification.py 文件
-    # with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_4.py') as f:
-    with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_5.py') as f:    
+    with open('D:\\OneDrive - sjtu.edu.cn\\Bachelor Thesis\\DeepMind\\funsearch-re-s\\funsearch-re-s\\specification_new_5.py') as f:
+    # with open('/home/jty/Code/zhengkan/deepmind/funsearch_help_me/funsearch-re-s/funsearch-re-s/specification_new_5.py') as f:
         specification2 = f.read()
 
-    # inputs = dataset.datasets['24hr']['CHN']
     inputs = {'24hr': dataset.datasets['24hr']}
 
     class_config = config.ClassConfig(llm_class=LLMAPI, sandbox_class=Sandbox)
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
 
     # bin_packing_or3 = {'OR3': bin_packing_utils.datasets['OR3']}
-    global_max_sample_num = 15  # if it is set to None, funsearch will execute an endless loop
+    global_max_sample_num = 20  # if it is set to None, funsearch will execute an endless loop
     funsearch.main(
         specification=specification2,
         inputs=inputs,
@@ -254,7 +253,7 @@ if __name__ == '__main__':
     if True:
         # 绘制 scores_list 折线, 并在最高点处画一条水平虚线作为参考线
         plt.plot(scores_list)
-        plt.axhline(y=max(scores_list), color='r', linestyle='--')
+        plt.axhline(y=(scores_list[0]), color='r', linestyle='--')
         plt.title('Scores of the generated programs')
         plt.xlabel('Sample Number')
         plt.ylabel('Score')
