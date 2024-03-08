@@ -251,7 +251,9 @@ if __name__ == '__main__':
     )
 
     if True:
+        # 绘制 scores_list 折线, 并在最高点处画一条水平虚线作为参考线
         plt.plot(scores_list)
+        plt.axhline(y=max(scores_list), color='r', linestyle='--')
         plt.title('Scores of the generated programs')
         plt.xlabel('Sample Number')
         plt.ylabel('Score')
