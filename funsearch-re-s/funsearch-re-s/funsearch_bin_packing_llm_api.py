@@ -85,7 +85,7 @@ class LLMAPI(sampler.LLM):
                 # conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
                 payload = json.dumps({
                     "max_tokens": 1024,
-                    "model": "gpt-4-turbo-preview",
+                    "model": "gpt-3.5-turbo",
                     "messages": [
                         {
                             "role": "user",
@@ -240,7 +240,7 @@ if __name__ == '__main__':
     config = config.Config(samples_per_prompt=4, evaluate_timeout_seconds=120)
 
     # bin_packing_or3 = {'OR3': bin_packing_utils.datasets['OR3']}
-    global_max_sample_num = 20  # if it is set to None, funsearch will execute an endless loop
+    global_max_sample_num = 50  # if it is set to None, funsearch will execute an endless loop
     funsearch.main(
         specification=specification2,
         inputs=inputs,
