@@ -85,7 +85,7 @@ class LLMAPI(sampler.LLM):
                 # conn = http.client.HTTPSConnection("api.chatanywhere.com.cn")
                 payload = json.dumps({
                     "max_tokens": 1024,
-                    "model": "gpt-4",
+                    "model": "gpt-4-turbo-preview",
                     "messages": [
                         {
                             "role": "user",

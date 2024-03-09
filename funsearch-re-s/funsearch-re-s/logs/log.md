@@ -99,7 +99,7 @@ This error may have been caused by the following argument(s):
     return shortlisted_tasks[0]
 ```
 
-## 3月9日
+## 3月8日
 
 目前采用的方法还是把每个数据集的baseline也写进去，将生成的算法能达到的覆盖率和baseline的覆盖率积做对比，保存这个差值，最后求平均返回。
 
@@ -110,3 +110,47 @@ This error may have been caused by the following argument(s):
 我突然又想到，会不会是我们框架定的太死了，把funsearch框在这个贪心里面了，他其实一直只在贪心的这个空间里面找，没跳出去过，所以我做了两次测试。
 
 第一次我把priority函数的返回改成直接返回键值最小的那一个，第二次我写成了return 0让他自己瞎猜了直接，结果发现，首先，FunSearch仍然能优化，而且画出来图特别好看（x，看起来优化效果非常显著（x，其次，FunSearch仍然在朝着贪心算法的方向发展，我尝试了几个得分高的选项，与之前类似，对比贪心算法能有提升但很小。
+
+## 3月9日
+
+我继续沿着昨晚的思路又试了一次，结果还是挺理想的，可以看09-24-19那个记录。这次得分最高的算法我贴在下面：
+```angular2html
+if not sorted_combinations:
+        raise ValueError("No tasks are available for selection.")
+    
+    # Define weight coefficients for each factor
+    coverage_weight = 0.5
+    variety_weight = 0.3
+    difficulty_weight = 0.2
+    
+    # Placeholder for the best task and its score
+    best_task = None
+    best_score = -1
+    
+    for task_key, coverage_points in sorted_combinations.items():
+        # Calculate coverage score
+        coverage_score = len(coverage_points)
+        
+        # Calculate variety score (assuming a hypothetical variety score for simplification)
+        variety_score = len(set(coverage_points)) * 2  # Example of emphasizing variety
+        
+        # Simulate task difficulty score (e.g., based on some external conditions or task characteristics)
+        difficulty_score = 1 / (task_key[2] + 1)  # Simplified; assuming higher task indices are more difficult
+        
+        # Calculate overall task score using weighted sum
+        task_score = (coverage_score * coverage_weight +
+                      variety_score * variety_weight +
+                      difficulty_score * difficulty_weight)
+        
+        # Select the task if it has the highest score so far
+        if task_score > best_score:
+            best_score = task_score
+            best_task = task_key
+    
+    if best_task is None:
+        raise ValueError("Failed to select a task based on the given criteria.")
+    
+    # Return the best task key
+    return best_task
+```
+FunSearch给出了一个task score的概念，这个分数有一堆因素构成，我感觉对比我们之前的贪心算是一种不一样的算法？我在CHN和SEA两个数据集上手动测试过了，都有提升（45.8->45.9，61.2->62.5），我觉得这个思路有继续研究的价值，我想增加迭代次数试试看。
