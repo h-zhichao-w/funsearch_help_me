@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 
 def point2strip(grid_data):
@@ -13,7 +14,7 @@ def point2strip(grid_data):
     orbit_num, wave_num = grid_data.shape[0], grid_data.shape[1]
     gridDataLX = np.zeros((orbit_num, wave_num), dtype=object)
 
-    for orbit in range(orbit_num):
+    for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
             if not grid_data[orbit, wave].size:
                 continue

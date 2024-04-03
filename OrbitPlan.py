@@ -1,6 +1,7 @@
 import scipy.io as sio
 import numpy as np
 from Point2Strip import point2strip
+from Strip2StripLX import strip2stripLX
 
 taskFileName = "中国区域"
 gridFileName = "任务栅格数据\\工作模式2_8个波位\\"
@@ -28,4 +29,6 @@ surveyInterSame = 26
 surveyInterDiff = 52
 
 gridDataLX = point2strip(gridData)
-
+cellStripLX = strip2stripLX(gridDataLX, surveyTimeMin, openTimeMin)
+print(gridDataLX[9, 2])
+print(cellStripLX[9, 2])
