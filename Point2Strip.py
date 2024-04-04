@@ -11,7 +11,7 @@ def point2strip(grid_data):
         gridDataLX: 经过处理后的栅格数据，仍为二维 cell 数组，大小与输入参数 gridData 相同，LX for 连续。
     """
 
-    orbit_num, wave_num = grid_data.shape[0], grid_data.shape[1]
+    orbit_num, wave_num = grid_data.shape
     gridDataLX = np.zeros((orbit_num, wave_num), dtype=object)
 
     for orbit in tqdm(range(orbit_num)):
