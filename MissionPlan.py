@@ -28,10 +28,7 @@ def mission_plan(cell_strip, open_num_max, open_orbit_time_max,survey_orbit_num_
     sj = np.zeros_like(cell_strip, dtype=int)
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
-            if cell_strip[orbit, wave]:
+            if type(cell_strip[orbit, wave]) != int:
                 sj[orbit, wave] = cell_strip[orbit, wave][0][2]
 
-    strips = np.zeros_like(cell_strip, dtype=object)
-    for orbit in tqdm(range(orbit_num)):
-        for wave in range(wave_num):
-            if cell_strip[orbit, wave]:
+

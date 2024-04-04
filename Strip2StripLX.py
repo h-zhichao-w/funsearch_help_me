@@ -41,4 +41,11 @@ def strip2stripLX(grid_data, survey_time_min, open_time_min):
 
                 cell_strip_LX[orbit, wave] = lx
 
-    return cell_strip_LX
+    # 将cell_strip_LX中每个元素转换为numpy数组
+    strips = np.zeros_like(cell_strip_LX, dtype=object)
+    for orbit in tqdm(range(orbit_num)):
+        for wave in range(wave_num):
+            if cell_strip_LX[orbit, wave]:
+                strips[orbit, wave] = np.array(cell_strip_LX[orbit, wave])
+
+    return strips

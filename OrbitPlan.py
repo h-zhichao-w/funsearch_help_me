@@ -2,6 +2,7 @@ import scipy.io as sio
 import numpy as np
 from Point2Strip import point2strip
 from Strip2StripLX import strip2stripLX
+from MissionPlan import mission_plan
 
 taskFileName = "中国区域"
 gridFileName = "任务栅格数据\\工作模式2_8个波位\\"
@@ -10,8 +11,6 @@ resultFileName = "贪婪规划结果\\工作模式2_8个波位\\"    # 输出位
 # 加载栅格数据
 gridData = sio.loadmat(gridFileName + taskFileName + '.mat')
 gridData = np.array(gridData['gridData'])
-
-print(type(gridData))
 
 # 约束条件
 openNumMax = 6
@@ -30,5 +29,7 @@ surveyInterDiff = 52
 
 gridDataLX = point2strip(gridData)
 cellStripLX = strip2stripLX(gridDataLX, surveyTimeMin, openTimeMin)
-print(gridDataLX[9, 2])
-print(cellStripLX[9, 2])
+print(cellStripLX[:20])
+mission_plan(
+    cellStripLX, openNumMax, openOrbitTimeMax, surveyOrbitNumMax, surveyOrbitTimeMax, openTimeMax, openTimeMin, openInter, surveyOpenNumMax, surveyOpenTimeMax, surveyTimeMax, surveyTimeMin, surveyInterSame, surveyInterDiff
+)
