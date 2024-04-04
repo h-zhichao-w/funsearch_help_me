@@ -31,4 +31,7 @@ def mission_plan(cell_strip, open_num_max, open_orbit_time_max,survey_orbit_num_
             if type(cell_strip[orbit, wave]) != int:
                 sj[orbit, wave] = cell_strip[orbit, wave][0][2]
 
+    for orbit in tqdm(range(orbit_num)):
+
+
 
