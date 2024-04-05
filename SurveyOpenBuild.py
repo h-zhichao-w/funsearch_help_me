@@ -12,7 +12,7 @@ def survey_open_build(strips_of_orbit, **kwargs):
     """
 
     # 将开机信息保存为一个字典
-    survey = {'stips': [], 'number': 0, 'inter': [], 'time': 0, 'open': 0}
+    survey = {'strip': [], 'number': 0, 'inter': [], 'time': 0, 'open': 0}
     sign_inf = np.zeros_like(strips_of_orbit)
     # 初始化部分变量（没有用，只是为了符合语法，原程序的代码习惯太糟糕了）
     plan_st = 0
@@ -178,6 +178,109 @@ def survey_open_build(strips_of_orbit, **kwargs):
                                 print('=' * 20)
                                 continue
 
+                    # 部分满足最大开机时长
+                    elif plan_end - plan0 + 1 > kwargs['open_time_max'] >= plan_st - plan0:
+                        plan_end = plan0 + kwargs['open_time_max'] - 1
+                        # 满足累计成像时长约束
+                        if survey['time'] + plan_end - plan_st + 1 <= kwargs['survey_open_time_max']:
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= kwargs['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['open'] += plan_end - plan0 + 1
+                                strips_of_orbit[index, :] = 0
+                                print('=' * 20)
+                                print('当前条带：', [plan_st, plan_end, plan_wave])
+                                print('当前成像次数：', survey['number'])
+                                print('=' * 20)
+                                continue
+                            else:
+                                plan_end = plan_st + kwargs['survey_time_max'] - 1
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['open'] += plan_end - plan0 + 1
+                                strips_of_orbit[index, :] = 0
+                                print('=' * 20)
+                                print('当前条带：', [plan_st, plan_end, plan_wave])
+                                print('当前成像次数：', survey['number'])
+                                print('=' * 20)
+                                continue
 
+                        else:
+                            plan_end = plan_st + kwargs['survey_open_time_max'] - survey['time'] - 1
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= kwargs['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['open'] += plan_end - plan0 + 1
+                                strips_of_orbit[index, :] = 0
+                                print('=' * 20)
+                                print('当前条带：', [plan_st, plan_end, plan_wave])
+                                print('当前成像次数：', survey['number'])
+                                print('=' * 20)
+                                continue
+                            else:
+                                plan_end = plan_st + kwargs['survey_time_max'] - 1
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['open'] += plan_end - plan0 + 1
+                                strips_of_orbit[index, :] = 0
+                                print('=' * 20)
+                                print('当前条带：', [plan_st, plan_end, plan_wave])
+                                print('当前成像次数：', survey['number'])
+                                print('=' * 20)
+                                continue
 
+                    # 不满足最大开机时长
+                    else:
+                        break
 
+            elif survey['number'] == 4:
+                margin = kwargs['survey_open_time_max'] - survey['time']
+                index = [i for i in range(len(survey['inter'])) and 0 <= survey['inter'][i] < margin]
+                inter = []
+                for i in index:
+                    if survey['strip'][i - 1][2] == survey['strip'][i][2] and survey['strip'][i][1] - survey['strip'][i - 1][0] + 1 <= kwargs['survey_time_max']:
+                        inter.append(survey['inter'][i])
+
+                if not len(inter):
+                    id_ = [i for i in range(len(survey['inter'])) and survey['inter'][i] == min(inter)]
+                    id_result = []
+                    for i in id_:
+                        if survey['strip'][i - 1][2] == survey['strip'][i][2] and survey['strip'][i][1] - survey['strip'][i - 1][0] + 1 <= kwargs['survey_time_max']:
+                            id_result.append(i)
+                    idm = id_result[0]
+                    plan_st = survey['strip'][idm - 1][0]
+                    plan_end = survey['strip'][idm][1]
+                    survey['strip'][idm - 1] = [plan_st, plan_end, plan_wave]
+                    survey['strip'][idm] = []
+                    survey['number'] -= 1
+                    survey['time'] += survey['inter'][idm]
+                    survey['inter'][idm] = []
+                    continue
+
+            else:
+                break
+
+        else:
+            break
