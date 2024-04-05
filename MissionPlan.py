@@ -3,6 +3,7 @@
 """
 import numpy as np
 from tqdm import tqdm
+from PlanOrbit import plan_orbit
 
 
 def mission_plan(cell_strip, **kwargs):
@@ -16,13 +17,22 @@ def mission_plan(cell_strip, **kwargs):
     sj = np.zeros_like(cell_strip, dtype=int)
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
-            if type(cell_strip[orbit, wave]) != int:
+            if type(cell_strip[orbit, wave]) is not int:
                 sj[orbit, wave] = cell_strip[orbit, wave][0][2]
 
-    for orbit in tqdm(range(orbit_num)):
-        pass
+    for orbit in range(4, 5):
+        strips = cell_strip[orbit]
+        row_num = max(len(wave) for wave in strips)
+        strip_of_orbit = [[] for _ in range(row_num)]
+        for row in range(row_num):
+            for wave in range(wave_num):
+                try:
+                    strip_of_orbit[row].append(list(strips[wave][row]))
+                except IndexError:
+                    strip_of_orbit[row].append([np.inf] * 3)
+        strip_of_orbit = np.array(strip_of_orbit)
+        print(strip_of_orbit)
+        print(strip_of_orbit.shape)
+        survey_total = plan_orbit(strip_of_orbit, **kwargs)
 
-    return 0, 0
-
-
-
+    return 1
