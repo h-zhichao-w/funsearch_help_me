@@ -5,6 +5,7 @@
 import numpy as np
 from tqdm import tqdm
 
+
 def strip2stripLX(grid_data, survey_time_min, open_time_min):
     """
     Args:

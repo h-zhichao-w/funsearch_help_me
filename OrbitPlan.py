@@ -29,7 +29,5 @@ surveyInterDiff = 52
 
 gridDataLX = point2strip(gridData)
 cellStripLX = strip2stripLX(gridDataLX, surveyTimeMin, openTimeMin)
-print(cellStripLX[:20])
-mission_plan(
-    cellStripLX, openNumMax, openOrbitTimeMax, surveyOrbitNumMax, surveyOrbitTimeMax, openTimeMax, openTimeMin, openInter, surveyOpenNumMax, surveyOpenTimeMax, surveyTimeMax, surveyTimeMin, surveyInterSame, surveyInterDiff
-)
+print(cellStripLX[2, 3])
+orbitPlan, surveyPlan = mission_plan(cellStripLX)
