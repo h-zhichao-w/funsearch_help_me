@@ -12,7 +12,8 @@ def point2strip(grid_data):
     """
 
     orbit_num, wave_num = grid_data.shape
-    gridDataLX = np.zeros((orbit_num, wave_num), dtype=object)
+    gridDataLX = np.empty((orbit_num, wave_num), dtype=object)
+    gridDataLX.fill([])
 
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):

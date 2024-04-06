@@ -14,7 +14,8 @@ def strip2stripLX(grid_data, survey_time_min, open_time_min):
         open_time_min: int, 开机模式的最小持续时间。
     """
     orbit_num, wave_num = grid_data.shape
-    cell_strip_LX = np.zeros((orbit_num, wave_num), dtype=object)
+    cell_strip_LX = np.empty((orbit_num, wave_num), dtype=object)
+    cell_strip_LX.fill([])
 
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
@@ -43,7 +44,8 @@ def strip2stripLX(grid_data, survey_time_min, open_time_min):
                 cell_strip_LX[orbit, wave] = lx
 
     # 将cell_strip_LX中每个元素转换为numpy数组
-    strips = np.zeros_like(cell_strip_LX, dtype=object)
+    strips = np.empty((orbit_num, wave_num), dtype=object)
+    strips.fill([])
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
             if cell_strip_LX[orbit, wave]:
