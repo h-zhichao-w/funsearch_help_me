@@ -1,5 +1,6 @@
 import numpy as np
 from SurveyOpenBuild import survey_open_build
+from OpenOrbitBuild import open_orbit_build
 
 
 def plan_orbit(strips, **kwargs):
@@ -21,4 +22,25 @@ def plan_orbit(strips, **kwargs):
         else:
             break
 
-    return survey_total
+    survey_total_array = np.zeros((len(survey_total), 6))
+    for i in range(len(survey_total)):
+        survey_total_array[i, 0] = i
+        survey_total_array[i, 1] = survey_total[i]['start']
+        survey_total_array[i, 2] = survey_total[i]['end']
+        survey_total_array[i, 3] = survey_total[i]['number']
+        survey_total_array[i, 4] = survey_total[i]['time']
+        survey_total_array[i, 5] = survey_total[i]['open']
+
+    k = 0
+    orbit_total = []
+    while True:
+        open_build, survey_total_array = open_orbit_build(survey_total_array, **kwargs)
+        if open_build['strip']:
+            k += 1
+            open_build['start'] = open_build['strip'][0][1]
+            open_build['end'] = open_build['strip'][open_build['open_num'] - 1][2]
+            orbit_total.append(open_build)
+        else:
+            break
+
+    return survey_total, orbit_total

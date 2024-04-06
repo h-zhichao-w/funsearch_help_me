@@ -20,7 +20,7 @@ def mission_plan(cell_strip, **kwargs):
             if type(cell_strip[orbit, wave]) is not int:
                 sj[orbit, wave] = cell_strip[orbit, wave][0][2]
 
-    for orbit in range(4, 5):
+    for orbit in tqdm(range(2, 3)):
         strips = cell_strip[orbit]
         row_num = max(len(wave) for wave in strips)
         strip_of_orbit = [[] for _ in range(row_num)]
@@ -31,8 +31,11 @@ def mission_plan(cell_strip, **kwargs):
                 except IndexError:
                     strip_of_orbit[row].append([np.inf] * 3)
         strip_of_orbit = np.array(strip_of_orbit)
-        print(strip_of_orbit)
-        print(strip_of_orbit.shape)
+        for i in range(strip_of_orbit.shape[0]):
+            for j in range(strip_of_orbit.shape[1]):
+                if strip_of_orbit[i, j, 0] != np.inf:
+                    strip_of_orbit[i, j, 2] = j + 1
+
         survey_total = plan_orbit(strip_of_orbit, **kwargs)
 
-    return 1
+    return survey_total
