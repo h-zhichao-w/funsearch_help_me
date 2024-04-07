@@ -130,6 +130,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 continue
                             else:
                                 plan_end = plan_st + kwargs['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
                                 # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
@@ -138,7 +139,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -147,6 +148,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                         # 超出累计成像时长约束
                         else:
                             plan_end = plan_st + kwargs['survey_open_time_max'] - survey['time'] - 1
+                            strips_of_orbit[row, col, 0] = plan_end + 1
                             # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= kwargs['survey_time_max']:
                                 # 记录条带
@@ -157,7 +159,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -165,6 +167,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 continue
                             else:
                                 plan_end = plan_st + kwargs['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
                                 # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
@@ -173,7 +176,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -183,6 +186,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                     # 部分满足最大开机时长
                     elif plan_end - plan0 + 1 > kwargs['open_time_max'] >= plan_st - plan0:
                         plan_end = plan0 + kwargs['open_time_max'] - 1
+                        strips_of_orbit[row, col, 0] = plan_end + 1
                         # 满足累计成像时长约束
                         if survey['time'] + plan_end - plan_st + 1 <= kwargs['survey_open_time_max']:
                             # 满足最大成像时长约束
@@ -195,7 +199,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -203,6 +207,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 continue
                             else:
                                 plan_end = plan_st + kwargs['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
                                 # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
@@ -211,7 +216,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -220,6 +225,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
 
                         else:
                             plan_end = plan_st + kwargs['survey_open_time_max'] - survey['time'] - 1
+                            strips_of_orbit[row, col, 0] = plan_end + 1
                             # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= kwargs['survey_time_max']:
                                 # 记录条带
@@ -230,7 +236,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])
@@ -239,6 +245,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                             else:
                                 plan_end = plan_st + kwargs['survey_time_max'] - 1
                                 # 记录条带
+                                strips_of_orbit[row, col, 0] = plan_end + 1
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -246,7 +253,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
                                 plan_wave_pre = plan_wave
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['open'] += plan_end - plan0 + 1
-                                strips_of_orbit[row, col, :] = np.inf
+                                # strips_of_orbit[row, col, :] = np.inf
                                 # print('=' * 20)
                                 # print('当前条带：', [plan_st, plan_end, plan_wave])
                                 # print('当前成像次数：', survey['number'])

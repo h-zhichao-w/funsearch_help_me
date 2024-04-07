@@ -38,11 +38,35 @@ orbitPlan, surveyPlan, sj = mission_plan(cellStripLX, survey_time_min=surveyTime
                                      survey_open_num_max=surveyOpenNumMax, survey_open_time_max=surveyOpenTimeMax,
                                      survey_time_max=surveyTimeMax, survey_inter_same=surveyInterSame,
                                      survey_inter_diff=surveyInterDiff)
-Sno = np.where(sj[:, :] == 1)
-oribit_num, cycle_num = surveyPlan.shape
-timeTotal = np.zeros(cycle_num)
+Sno = np.where(sj[:] == 1)
+orbit_num = surveyPlan.size
+col_num = max(len(orbitPlan[i]) for i in range(orbit_num))
+orbitPlan_array = np.empty((orbit_num, col_num), dtype=object)
+orbitPlan_array.fill([])
+for i in range(orbit_num):
+    for j in range(len(orbitPlan[i])):
+        strips = orbitPlan[i][j][0]
+        strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbitPlan[i][j][1]))
+        strips = strips.astype(int)
+        orbitPlan_array[i][j] = strips
 
-print(orbitPlan)
-# for k in range(cycle_num):
-#     for i in range(Sno[0].size):
-#         if surveyPlan[]
+cycle_num = max(len(surveyPlan[i]) for i in range(orbit_num))
+surveyPlan_array = np.empty((orbit_num, cycle_num), dtype=object)
+surveyPlan_array.fill([])
+for i in range(orbit_num):
+    for j in range(len(surveyPlan[i])):
+        strips = surveyPlan[i][j]
+        strips = strips.astype(int)
+        surveyPlan_array[i][j] = strips
+
+timeTotal = np.zeros(cycle_num)
+for k in range(cycle_num):
+    for i in range(len(Sno[0])):
+        sno = Sno[0][i]
+        if type(surveyPlan_array[sno, k]) is not list:
+            # timeTotal(k) =  timeTotal(k)+sum(surveyPlan{Sno(i),k}(:,2)-surveyPlan{Sno(i),k}(:,1)+1);
+            timeTotal[k] += sum(surveyPlan_array[sno, k][:, 1] - surveyPlan_array[sno, k][:, 0] + 1)
+        else:
+            continue
+
+print(len(timeTotal))
