@@ -29,7 +29,7 @@ def plan_orbit(strips, **kwargs):
         survey_total_array[i, 2] = survey_total[i]['end']
         survey_total_array[i, 3] = survey_total[i]['number']
         survey_total_array[i, 4] = survey_total[i]['time']
-        survey_total_array[i, 5] = survey_total[i]['open']
+        survey_total_array[i, 5] = survey_total_array[i, 2] - survey_total_array[i, 1]
 
     k = 0
     orbit_total = []

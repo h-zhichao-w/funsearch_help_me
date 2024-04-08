@@ -31,13 +31,13 @@ gridDataLX = point2strip(gridData)
 cellStripLX = strip2stripLX(gridDataLX, surveyTimeMin, openTimeMin)
 
 orbitPlan, surveyPlan, sj = mission_plan(cellStripLX, survey_time_min=surveyTimeMin, open_time_min=openTimeMin,
-                                     open_num_max=openNumMax,
-                                     open_orbit_time_max=openOrbitTimeMax, survey_orbit_num_max=surveyOrbitNumMax,
-                                     survey_orbit_time_max=surveyOrbitTimeMax, open_time_max=openTimeMax,
-                                     open_inter=openInter,
-                                     survey_open_num_max=surveyOpenNumMax, survey_open_time_max=surveyOpenTimeMax,
-                                     survey_time_max=surveyTimeMax, survey_inter_same=surveyInterSame,
-                                     survey_inter_diff=surveyInterDiff)
+                                         open_num_max=openNumMax,
+                                         open_orbit_time_max=openOrbitTimeMax, survey_orbit_num_max=surveyOrbitNumMax,
+                                         survey_orbit_time_max=surveyOrbitTimeMax, open_time_max=openTimeMax,
+                                         open_inter=openInter,
+                                         survey_open_num_max=surveyOpenNumMax, survey_open_time_max=surveyOpenTimeMax,
+                                         survey_time_max=surveyTimeMax, survey_inter_same=surveyInterSame,
+                                         survey_inter_diff=surveyInterDiff)
 Sno = np.where(sj[:] == 1)
 orbit_num = surveyPlan.size
 col_num = max(len(orbitPlan[i]) for i in range(orbit_num))
@@ -64,9 +64,9 @@ for k in range(cycle_num):
     for i in range(len(Sno[0])):
         sno = Sno[0][i]
         if type(surveyPlan_array[sno, k]) is not list:
-            # timeTotal(k) =  timeTotal(k)+sum(surveyPlan{Sno(i),k}(:,2)-surveyPlan{Sno(i),k}(:,1)+1);
             timeTotal[k] += sum(surveyPlan_array[sno, k][:, 1] - surveyPlan_array[sno, k][:, 0] + 1)
         else:
             continue
 
-print(len(timeTotal))
+print(timeTotal)
+print(sum(timeTotal))

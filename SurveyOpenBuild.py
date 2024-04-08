@@ -5,14 +5,13 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
 
     # 将开机信息保存为一个字典
     survey = {'strip': [], 'number': 0, 'inter': [], 'time': 0, 'open': 0}
-    inf = np.zeros_like(strips_of_orbit, dtype=float)
-    inf.fill(np.inf)
+    # inf = np.zeros_like(strips_of_orbit, dtype=float)
+    # inf.fill(np.inf)
 
     # 初始化部分变量（没有用，只是为了符合语法，原程序的代码习惯太糟糕了）
     plan_st = 0
     plan_end = 0
     plan_wave = 0
-    plan_st_pre = 0
     plan_end_pre = 0
     plan_wave_pre = 0
     plan0 = 0
@@ -28,9 +27,8 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
             col = index[1][0]
             # 由于这是第一个考虑的任务，所以对后续而言，这个一定是“上一个”任务
             plan_end_pre = strips_of_orbit[row, col, 1]
-            plan_st_pre = strips_of_orbit[row, col, 0]
-            plan_wave_pre = strips_of_orbit[row, col, 2]
-            plan0 = plan_st_pre  # 开机时刻
+            # plan_wave_pre = strips_of_orbit[row, col, 2]
+            plan0 = strips_of_orbit[row, col, 0]  # 开机时刻
         # 第二次进循环开始，一定会进该分支
         else:
             # 与上一个任务相同的波段和不同的波段的条带编号
@@ -40,7 +38,7 @@ def survey_open_build(strips_of_orbit: np.ndarray, **kwargs):
             combined_mask = ~inf_mask & not_plan_wave_mask
             index_diff = np.where(combined_mask)
             # 用survey_gap记录每个任务和上个任务之间会需要的时间间隔
-            survey_gap = np.zeros_like(strips_of_orbit)
+            survey_gap = np.ones_like(strips_of_orbit) * -1
             survey_gap[index_same[0], index_same[1], 0] = strips_of_orbit[index_same[0], index_same[1], 0] - plan_end - 1 - kwargs['survey_inter_same']
             survey_gap[index_diff[0], index_diff[1], 0] = strips_of_orbit[index_diff[0], index_diff[1], 0] - plan_end - 1 - kwargs['survey_inter_diff']
             temp = np.where(survey_gap[:, :,  0] >= 0)

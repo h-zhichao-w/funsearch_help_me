@@ -48,18 +48,21 @@ def mission_plan(cell_strip, **kwargs):
 
         survey_total, orbit_total = plan_orbit(strip_of_orbit, **kwargs)
 
+        survey_plan[orbit] = [[] for _ in range(len(orbit_total))]
         # 遍历重访周期
         for k in range(len(orbit_total)):
             orbit_strip = np.array(orbit_total[k]['strip'], dtype=int)
             orbit_plan[orbit].append([orbit_strip[:, :3], sj[orbit]])
             no = orbit_strip[:, 0]
 
+
             # temp = []
             for p in no:
                 strip_p = np.array(survey_total[p]['strip'], dtype=int)
                 strip_p = np.hstack((strip_p, np.ones((strip_p.shape[0], 1)) * sj[orbit]))
-                survey_plan[orbit].append(strip_p)
+                survey_plan[orbit][k].append(strip_p)
 
+            survey_plan[orbit][k] = np.vstack((survey_plan[orbit][k][:]))
             # survey_plan[orbit].append(temp)
 
     survey_plan = np.array(survey_plan, dtype=object)

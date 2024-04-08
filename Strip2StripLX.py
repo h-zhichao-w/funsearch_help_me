@@ -20,7 +20,7 @@ def strip2stripLX(grid_data, survey_time_min, open_time_min):
     for orbit in tqdm(range(orbit_num)):
         for wave in range(wave_num):
             strips = grid_data[orbit, wave]
-            if strips == 0:
+            if not len(strips):
                 continue
             # 若只有一个条带，则直接加入
             if len(strips) == 1:

@@ -42,7 +42,7 @@ def open_orbit_build(survey_total_array, **kwargs):
                                 open_end = open_st + kwargs['open_time_min'] - 1
                             else:
                                 open_st = open_end - kwargs['open_time_min'] + 1
-                    array_temp.append([survey_total_array[list_index_c[i], 0], open_st, open_end, survey_total_array[list_index_c[i], 3], survey_total_array[index_c[i], 4], kwargs['open_time_min']])
+                    array_temp.append([survey_total_array[list_index_c[i], 0], open_st, open_end, survey_total_array[list_index_c[i], 3], survey_total_array[list_index_c[i], 4], kwargs['open_time_min']])
 
                 else:
                     array_temp.append(list(survey_total_array[list_index_c[i]]))
@@ -51,7 +51,7 @@ def open_orbit_build(survey_total_array, **kwargs):
             if not len(index_m):
                 break
 
-            index_f = [i for i in index_m if array_temp[i][2] == min([array_temp[j][2] for j in index_m])][0]
+            index_f = [i for i in index_m if array_temp[i][1] == min([array_temp[j][1] for j in index_m])][0]
             no = int(array_temp[index_f][0])
             open_build['strip'].append(tuple(array_temp[index_f]))
             open_build['open_num'] += 1
