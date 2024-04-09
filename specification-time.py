@@ -44,6 +44,125 @@ def main(dataset: dict) -> tuple[int, int]:
     grid_data_cont = point2strip(grid_data)
     strip_cont = strip2strip_cont(grid_data_cont, dataset['survey_time_min'], dataset['boot_time_min'])
 
+    # get the total number of orbits and wave
+    orbit_num, wave_num = strip_cont.shape
+
+    # Initialize the orbit plan and survey plan
+    orbit_plan = [[] for _ in range(orbit_num)]
+    survey_plan = [[] for _ in range(orbit_num)]
+
+    # Extract the ascending and descending orbit identification
+    ad = np.zeros((orbit_num,), dtype=int)
+    for orbit in tqdm(range(orbit_num)):
+        for wave in range(wave_num):
+            if len(strip_cont[orbit, wave]):
+                ad[orbit] = strip_cont[orbit, wave][0][2]
+
+    # Planning orbit by orbit
+    for orbit in tqdm(range(orbit_num)):
+        strips = strip_cont[orbit]
+        # In each wave, there can be more than one strip, we need to extract all the strips in each wave.
+        row_num = max(max(len(wave) for wave in strips), 1)
+        # Put all the strips in one wave together.
+        # The strip_of_orbit is a 3D array, with the size of (row_num, wave_num, 3), and is the basis of planning.
+        strip_of_orbit = [[] for _ in range(row_num)]
+        for row in range(row_num):
+            for wave in range(wave_num):
+                try:
+                    strip_of_orbit[row].append(list(strips[wave][row]))
+                except IndexError:
+                    strip_of_orbit[row].append([np.inf] * 3)
+        strip_of_orbit = np.array(strip_of_orbit)
+        for i in range(strip_of_orbit.shape[0]):
+            for j in range(strip_of_orbit.shape[1]):
+                # If the strip is not empty, set the wave number.
+                if strip_of_orbit[i, j, 0] != np.inf:
+                    strip_of_orbit[i, j, 2] = j + 1
+
+        # Make sure the digital type of the array align with the np.inf
+        if strip_of_orbit.dtype == np.dtype('int32'):
+            strip_of_orbit = strip_of_orbit.astype('float64')
+
+        # Find the all possible surveys in this orbit
+        survey_total = []
+        while True:
+            survey, strips = survey_boot_build(strip_of_orbit, dataset)
+            if len(survey['strip']):
+                survey['start'] = survey['strip'][0][0]
+                survey['end'] = survey['strip'][survey['number'] - 1][1]
+                survey_total.append(survey)
+            else:
+                break
+
+        survey_total_array = np.zeros((len(survey_total), 6))
+        for i in range(len(survey_total)):
+            survey_total_array[i, 0] = i
+            survey_total_array[i, 1] = survey_total[i]['start']
+            survey_total_array[i, 2] = survey_total[i]['end']
+            survey_total_array[i, 3] = survey_total[i]['number']
+            survey_total_array[i, 4] = survey_total[i]['time']
+            survey_total_array[i, 5] = survey_total_array[i, 2] - survey_total_array[i, 1]
+
+        orbit_total = []
+        while True:
+            boot_build, survey_total_array = boot_orbit_build(survey_total_array, dataset)
+            if boot_build['strip']:
+                boot_build['start'] = boot_build['strip'][0][1]
+                boot_build['end'] = boot_build['strip'][boot_build['boot_num'] - 1][2]
+                orbit_total.append(boot_build)
+            else:
+                break
+
+        survey_plan[orbit] = [[] for _ in range(len(orbit_total))]
+        # 遍历重访周期
+        for k in range(len(orbit_total)):
+            orbit_strip = np.array(orbit_total[k]['strip'], dtype=int)
+            orbit_plan[orbit].append([orbit_strip[:, :3], ad[orbit]])
+            no = orbit_strip[:, 0]
+
+            for p in no:
+                strip_p = np.array(survey_total[p]['strip'], dtype=int)
+                strip_p = np.hstack((strip_p, np.ones((strip_p.shape[0], 1)) * ad[orbit]))
+                survey_plan[orbit][k].append(strip_p)
+
+            survey_plan[orbit][k] = np.vstack((survey_plan[orbit][k][:]))
+
+    survey_plan = np.array(survey_plan, dtype=object)
+    orbit_plan = np.array(orbit_plan, dtype=object)
+
+    no_a = np.where(ad[:] == 1)
+    orbit_num = survey_plan.size
+    col_num = max(len(orbit_plan[i]) for i in range(orbit_num))
+    orbit_plan_array = np.empty((orbit_num, col_num), dtype=object)
+    orbit_plan_array.fill([])
+    for i in range(orbit_num):
+        for j in range(len(orbit_plan[i])):
+            strips = orbit_plan[i][j][0]
+            strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbit_plan[i][j][1]))
+            strips = strips.astype(int)
+            orbit_plan_array[i][j] = strips
+
+    cycle_num = max(len(survey_plan[i]) for i in range(orbit_num))
+    survey_plan_array = np.empty((orbit_num, cycle_num), dtype=object)
+    survey_plan_array.fill([])
+    for i in range(orbit_num):
+        for j in range(len(survey_plan[i])):
+            strips = survey_plan[i][j]
+            strips = strips.astype(int)
+            survey_plan_array[i][j] = strips
+
+    timeTotal = np.zeros(cycle_num)
+    for k in range(cycle_num):
+        for i in range(len(no_a[0])):
+            a = no_a[0][i]
+            if type(survey_plan_array[a, k]) is not list:
+                timeTotal[k] += sum(survey_plan_array[a, k][:, 1] - survey_plan_array[a, k][:, 0] + 1)
+            else:
+                continue
+
+    print(timeTotal)
+    print(sum(timeTotal))
+
 
 def point2strip(grid_data: np.ndarray) -> np.ndarray:
     """
@@ -140,6 +259,367 @@ def strip2strip_cont(grid_data_cont: np.ndarray, survey_time_min: int, boot_time
     return strips
 
 
+def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict):
+    """
+    Function that plans the surveys.
+
+    Args:
+        strips_of_orbit: 3D array, the size is (number of rows, number of columns, 3), containing the strips in the given orbit.
+        dataset: dict, all the data needed for task allocation, in this function, mainly use the constraints for survey.
+            dataset['boot_num_max']: int, the maximum times of boot-ups in each orbit.
+            dataset['boot_orbit_time_max']: int, the maximum cumulative time of boot-ups on in each orbit.
+            dataset['survey_orbit_num_max']: int, the maximum number of surveys in each orbit.
+            dataset['survey_orbit_time_max']: int, the maximum cumulative time of survey in each orbit.
+            dataset['boot_time_max']: int, the maximum lasting time of each boot-up.
+            dataset['boot_time_min']: int, the minimum lasting time of each boot-up.
+            dataset['boot_inter']: int, the minimum interval between two boot-ups.
+            dataset['survey_boot_num_max']: int, the maximum number of surveys in each boot-up.
+            dataset['survey_boot_time_max']: int, the maximum cumulative time of surveys in each boot-up.
+            dataset['survey_time_max']: int, the maximum lasting time of each survey.
+            dataset['survey_time_min']: int, the minimum lasting time of each survey.
+            dataset['survey_inter_same']: int, the minimum interval between two surveys that are in the same wave.
+            dataset['survey_inter_diff']: int, the minimum interval between two surveys that are in different waves.
+    """
+
+    # Initialize the dict for recording the survey
+    survey = {
+        'strip': [],    # The strips in the survey
+        'number': 0,    # The number of strips in the survey
+        'inter': [],    # The intervals between two strips
+        'time': 0,      # The total time taken for the survey
+        'boot': 0       # The total number of boot-ups taken
+    }
+
+    # 初始化部分变量（没有用，只是为了符合语法，原程序的代码习惯太糟糕了）
+    plan_st = 0
+    plan_end = 0
+    plan_wave = 0
+    plan_end_pre = 0
+    plan_wave_pre = 0
+    plan0 = 0
+    row = 0
+    col = 0
+
+    while not np.isinf(strips_of_orbit).all():
+        # if not strip has been arranged
+        if survey['number'] == 0:
+            # find the earliest strip
+            index = np.where(strips_of_orbit[:, :, 0] == np.min(strips_of_orbit[:, :, 0]))
+            row = index[0][0]
+            col = index[1][0]
+            plan_end_pre = strips_of_orbit[row, col, 1]
+            # record the start time of the first strip, also the time of boot-up
+            plan0 = strips_of_orbit[row, col, 0]
+
+        else:
+            # the index of strips that has the same wave number with the previous strip
+            index_same = np.where(strips_of_orbit[:, :, 2] == plan_wave)
+            # the index of strips that has different wave number with the previous strip
+            inf_mask = np.isinf(strips_of_orbit[:, :, 2])
+            not_plan_wave_mask = strips_of_orbit[:, :, 2] != plan_wave
+            combined_mask = ~inf_mask & not_plan_wave_mask
+            index_diff = np.where(combined_mask)
+            # survey_gap is the gap between the end of the previous strip and the start of the current strip
+            survey_gap = np.ones_like(strips_of_orbit) * -1
+            survey_gap[index_same[0], index_same[1], 0] = strips_of_orbit[index_same[0], index_same[1], 0] - plan_end - 1 - dataset['survey_inter_same']
+            survey_gap[index_diff[0], index_diff[1], 0] = strips_of_orbit[index_diff[0], index_diff[1], 0] - plan_end - 1 - dataset['survey_inter_diff']
+            # find the strip with the smallest gap, if there is any gap satisfies the constraints
+            temp = np.where(survey_gap[:, :,  0] >= 0)
+            if len(temp[0]) == 0:
+                break
+            else:
+                index = np.where(strips_of_orbit[:, :, 0] == min(strips_of_orbit[temp[0], temp[1], 0]))
+                row = index[0][0]
+                col = index[1][0]
+
+        plan_st = strips_of_orbit[row, col, 0]
+        plan_end = strips_of_orbit[row, col, 1]
+        plan_wave = strips_of_orbit[row, col, 2]
+
+        # 开机时间小于最大开机时间且开机次数小于最大开机次数
+        if survey['time'] < dataset['survey_boot_time_max'] and survey['boot'] < dataset['boot_time_max']:
+            # 成像次数约束
+            if survey['number'] < 4:
+                # 任务持续时间小于最小持续时间
+                if plan_end - plan_st + 1 < dataset['survey_time_min']:
+                    if survey['number'] == 0:  # 如果这是第一个任务，向后补满时间
+                        plan_end = plan_st + dataset['survey_time_min'] - 1
+                    else:
+                        # 先决定间隔时间
+                        if plan_wave == plan_wave_pre:
+                            survey_inter = dataset['survey_inter_same']
+                        else:
+                            survey_inter = dataset['survey_inter_diff']
+
+                        # 间隔时间正好
+                        if plan_end_pre + survey_inter + 1 == plan_st:
+                            plan_end = plan_st + dataset['survey_time_min'] - 1
+                        # 间隔时间太多
+                        elif plan_end_pre + survey_inter + 1 < plan_st:
+                            # 如果结束时间不变的情况下，开始时间太早，那么平移整个条带
+                            if plan_end - dataset['survey_time_min'] + 1 <= plan_end_pre + survey_inter + 1:
+                                plan_st = plan_end_pre + survey_inter + 1
+                                plan_end = plan_st + dataset['survey_time_min'] - 1
+                            # 如果结束时间不变的情况下，开始时间满足间隔要求，则只改变开始时间
+                            else:
+                                plan_st = plan_end - dataset['survey_time_min'] + 1
+
+                    # 当前条带结束满足最大开机时长的约束
+                    if plan_end - plan0 + 1 <= dataset['boot_time_max']:
+                        # 满足最大成像时长约束
+                        if survey['time'] + plan_end - plan_st + 1 <= dataset['survey_boot_time_max']:
+                            # 记录条带
+                            survey['strip'].append([plan_st, plan_end, plan_wave])
+                            survey['number'] += 1
+                            survey['inter'].append(plan_st - plan_end_pre - 1)
+                            plan_end_pre = plan_end
+                            plan_wave_pre = plan_wave
+                            survey['time'] += plan_end - plan_st + 1
+                            survey['boot'] += plan_end - plan0 + 1
+                            strips_of_orbit[row, col, :] = np.inf
+                            continue
+                        else:
+                            break
+                    else:
+                        break
+
+                # 任务持续时间大于等于最小持续时间
+                else:
+                    # 当前条带结束满足最大开机时长的约束
+                    if plan_end - plan0 + 1 <= dataset['boot_time_max']:
+                        # 满足累计成像时长约束
+                        if survey['time'] + plan_end - plan_st + 1 <= dataset['survey_boot_time_max']:
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= dataset['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                strips_of_orbit[row, col, :] = np.inf
+                                continue
+                            else:
+                                plan_end = plan_st + dataset['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+                        # 超出累计成像时长约束
+                        else:
+                            plan_end = plan_st + dataset['survey_boot_time_max'] - survey['time'] - 1
+                            strips_of_orbit[row, col, 0] = plan_end + 1
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= dataset['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                continue
+                            else:
+                                plan_end = plan_st + dataset['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+
+                    # 部分满足最大开机时长
+                    elif plan_end - plan0 + 1 > dataset['boot_time_max'] >= plan_st - plan0:
+                        plan_end = plan0 + dataset['boot_time_max'] - 1
+                        strips_of_orbit[row, col, 0] = plan_end + 1
+                        # 满足累计成像时长约束
+                        if survey['time'] + plan_end - plan_st + 1 <= dataset['survey_boot_time_max']:
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= dataset['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+                            else:
+                                plan_end = plan_st + dataset['survey_time_max'] - 1
+                                strips_of_orbit[row, col, 0] = plan_end + 1
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+
+                        else:
+                            plan_end = plan_st + dataset['survey_boot_time_max'] - survey['time'] - 1
+                            strips_of_orbit[row, col, 0] = plan_end + 1
+                            # 满足最大成像时长约束
+                            if plan_end - plan_st + 1 <= dataset['survey_time_max']:
+                                # 记录条带
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+                            else:
+                                plan_end = plan_st + dataset['survey_time_max'] - 1
+                                # 记录条带
+                                strips_of_orbit[row, col, 0] = plan_end + 1
+                                survey['strip'].append([plan_st, plan_end, plan_wave])
+                                survey['number'] += 1
+                                survey['inter'].append(plan_st - plan_end_pre - 1)
+                                plan_end_pre = plan_end
+                                plan_wave_pre = plan_wave
+                                survey['time'] += plan_end - plan_st + 1
+                                survey['boot'] += plan_end - plan0 + 1
+                                continue
+
+                    # 不满足最大开机时长
+                    else:
+                        break
+
+            elif survey['number'] == 4:
+                margin = dataset['survey_boot_time_max'] - survey['time']
+                index = [i for i in range(len(survey['inter'])) and 0 <= survey['inter'][i] < margin]
+                inter = []
+                for i in index:
+                    if survey['strip'][i - 1][2] == survey['strip'][i][2] and survey['strip'][i][1] - \
+                            survey['strip'][i - 1][0] + 1 <= dataset['survey_time_max']:
+                        inter.append(survey['inter'][i])
+
+                if not len(inter):
+                    id_ = [i for i in range(len(survey['inter'])) and survey['inter'][i] == min(inter)]
+                    id_result = []
+                    for i in id_:
+                        if survey['strip'][i - 1][2] == survey['strip'][i][2] and survey['strip'][i][1] - \
+                                survey['strip'][i - 1][0] + 1 <= dataset['survey_time_max']:
+                            id_result.append(i)
+                    idm = id_result[0]
+                    plan_st = survey['strip'][idm - 1][0]
+                    plan_end = survey['strip'][idm][1]
+                    survey['strip'][idm - 1] = [plan_st, plan_end, plan_wave]
+                    survey['strip'][idm] = []
+                    survey['number'] -= 1
+                    survey['time'] += survey['inter'][idm]
+                    survey['inter'][idm] = []
+                    continue
+
+            else:
+                break
+
+        else:
+            break
+
+    return survey, strips_of_orbit
+
+
+def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict):
+    """
+    Function that plans the boot-ups.
+    
+    Args:
+        survey_total_array: 2D array, the size is (number of surveys, 6), containing the surveys in the given orbit.
+        dataset: dict, all the data needed for task allocation, in this function, mainly use the constraints for boot-ups.
+            dataset['boot_num_max']: int, the maximum times of boot-ups in each orbit.
+            dataset['boot_orbit_time_max']: int, the maximum cumulative time of boot-ups on in each orbit.
+            dataset['survey_orbit_num_max']: int, the maximum number of surveys in each orbit.
+            dataset['survey_orbit_time_max']: int, the maximum cumulative time of survey in each orbit.
+            dataset['boot_time_max']: int, the maximum lasting time of each boot-up.
+            dataset['boot_time_min']: int, the minimum lasting time of each boot-up.
+            dataset['boot_inter']: int, the minimum interval between two boot-ups.
+            dataset['survey_boot_num_max']: int, the maximum number of surveys in each boot-up.
+            dataset['survey_boot_time_max']: int, the maximum cumulative time of surveys in each boot-up.
+            dataset['survey_time_max']: int, the maximum lasting time of each survey.
+            dataset['survey_time_min']: int, the minimum lasting time of each survey.
+            dataset['survey_inter_same']: int, the minimum interval between two surveys that are in the same wave.
+            dataset['survey_inter_diff']: int, the minimum interval between two surveys that are in different waves.
+    """
+
+    boot_build = {'strip': [], 'boot_num': 0, 'survey_num': 0, 'inter': [], 'boot_time': 0, 'survey_time': 0}
+    boot_end_pre = 0
+
+    while not np.isinf(survey_total_array).all():
+        if boot_build['boot_num'] == 0:
+            index_c = [i for i in range(survey_total_array.shape[0]) if survey_total_array[i, 1] == min(survey_total_array[:, 1])][0]
+            boot_end_pre = survey_total_array[index_c, 2]
+
+        else:
+            if boot_build['boot_num'] < dataset['boot_num_max']:
+                index_c = [i for i in range(survey_total_array.shape[0]) if survey_total_array[i, 1] >= boot_end_pre + dataset['boot_inter'] + 1 and survey_total_array[i, 3] <= dataset['survey_orbit_num_max'] - boot_build['survey_num'] and survey_total_array[i, 4] <= dataset['survey_orbit_time_max'] - boot_build['survey_time']]
+            else:
+                break
+
+        # 这里index_c可能是数也可能是列表，只有index_c是空列表的时候才推出循环
+        if np.array(index_c).size:
+            if type(index_c) is int:
+                list_index_c = [index_c]
+            else:
+                list_index_c = index_c
+            array_temp = []
+            for i in range(len(list_index_c)):
+                boot_st = survey_total_array[list_index_c[i], 1]
+                boot_end = survey_total_array[list_index_c[i], 2]
+                boot_time = survey_total_array[list_index_c[i], 5]
+                if boot_time < dataset['boot_time_min']:
+                    if boot_build['boot_num'] == 0:
+                        boot_end = boot_st + dataset['boot_time_min'] - 1
+                    else:
+                        if boot_end_pre + dataset['boot_inter'] + 1 == boot_st:
+                            boot_end = boot_st + dataset['boot_time_min'] - 1
+                        elif boot_end_pre + dataset['boot_inter'] + 1 < boot_st:
+                            if boot_end - dataset['boot_time_min'] + 1 <= boot_end_pre + dataset['boot_inter']:
+                                boot_st = boot_end_pre + dataset['boot_inter'] + 1
+                                boot_end = boot_st + dataset['boot_time_min'] - 1
+                            else:
+                                boot_st = boot_end - dataset['boot_time_min'] + 1
+                    array_temp.append([survey_total_array[list_index_c[i], 0], boot_st, boot_end, survey_total_array[list_index_c[i], 3], survey_total_array[list_index_c[i], 4], dataset['boot_time_min']])
+
+                else:
+                    array_temp.append(list(survey_total_array[list_index_c[i]]))
+
+            index_m = [i for i in range(len(array_temp)) if array_temp[i][5] <= dataset['boot_orbit_time_max'] - boot_build['boot_time']]
+            if not len(index_m):
+                break
+
+            index_f = [i for i in index_m if array_temp[i][1] == min([array_temp[j][1] for j in index_m])][0]
+            no = int(array_temp[index_f][0])
+            boot_build['strip'].append(tuple(array_temp[index_f]))
+            boot_build['boot_num'] += 1
+            boot_build['survey_num'] += array_temp[index_f][3]
+            boot_build['inter'].append(array_temp[index_f][1] - boot_end_pre)
+            boot_end_pre = array_temp[index_f][2]
+            boot_build['boot_time'] += array_temp[index_f][5]
+            boot_build['survey_time'] += array_temp[index_f][4]
+            survey_total_array[no] = np.inf
+            continue
+        else:
+            break
+
+    return boot_build, survey_total_array
+
 
 dataset = {
     'task_name': "中国区域",
@@ -161,47 +641,3 @@ dataset = {
 
 if __name__ == "__main__":
     main(dataset)
-
-
-
-#
-# orbitPlan, surveyPlan, sj = mission_plan(cellStripLX, survey_time_min=surveyTimeMin, open_time_min=openTimeMin,
-#                                          open_num_max=openNumMax,
-#                                          open_orbit_time_max=openOrbitTimeMax, survey_orbit_num_max=surveyOrbitNumMax,
-#                                          survey_orbit_time_max=surveyOrbitTimeMax, open_time_max=openTimeMax,
-#                                          open_inter=openInter,
-#                                          survey_open_num_max=surveyOpenNumMax, survey_open_time_max=surveyOpenTimeMax,
-#                                          survey_time_max=surveyTimeMax, survey_inter_same=surveyInterSame,
-#                                          survey_inter_diff=surveyInterDiff)
-# Sno = np.where(sj[:] == 1)
-# orbit_num = surveyPlan.size
-# col_num = max(len(orbitPlan[i]) for i in range(orbit_num))
-# orbitPlan_array = np.empty((orbit_num, col_num), dtype=object)
-# orbitPlan_array.fill([])
-# for i in range(orbit_num):
-#     for j in range(len(orbitPlan[i])):
-#         strips = orbitPlan[i][j][0]
-#         strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbitPlan[i][j][1]))
-#         strips = strips.astype(int)
-#         orbitPlan_array[i][j] = strips
-#
-# cycle_num = max(len(surveyPlan[i]) for i in range(orbit_num))
-# surveyPlan_array = np.empty((orbit_num, cycle_num), dtype=object)
-# surveyPlan_array.fill([])
-# for i in range(orbit_num):
-#     for j in range(len(surveyPlan[i])):
-#         strips = surveyPlan[i][j]
-#         strips = strips.astype(int)
-#         surveyPlan_array[i][j] = strips
-#
-# timeTotal = np.zeros(cycle_num)
-# for k in range(cycle_num):
-#     for i in range(len(Sno[0])):
-#         sno = Sno[0][i]
-#         if type(surveyPlan_array[sno, k]) is not list:
-#             timeTotal[k] += sum(surveyPlan_array[sno, k][:, 1] - surveyPlan_array[sno, k][:, 0] + 1)
-#         else:
-#             continue
-#
-# print(timeTotal)
-# print(sum(timeTotal))
