@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def main(dataset: dict) -> tuple[int, int]:
+def main(dataset: dict) -> tuple[int, int, np.ndarray]:
     """
     Main function for task allocation for the Strict Return to Orbit (SRO) satellites.
     All the parameters related with time are given in the unit of seconds.
@@ -149,6 +149,8 @@ def main(dataset: dict) -> tuple[int, int]:
         for j in range(len(survey_plan[i])):
             strips = survey_plan[i][j]
             strips = strips.astype(int)
+            # sort the strips by the start time in ascending order
+            strips = strips[np.argsort(strips[:, 0])]
             survey_plan_array[i][j] = strips
 
     time_total = np.zeros(cycle_num)
@@ -163,7 +165,7 @@ def main(dataset: dict) -> tuple[int, int]:
     print(time_total)
     print(sum(time_total))
 
-    return cycle_num, sum(time_total)
+    return cycle_num, sum(time_total), orbit_plan_array
 
 
 def point2strip(grid_data: np.ndarray) -> np.ndarray:
@@ -330,9 +332,9 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
             if len(temp[0]) == 0:
                 break
             else:
-                index = np.where(strips_of_orbit[:, :, 0] == min(strips_of_orbit[temp[0], temp[1], 0]))
-                row = index[0][0]
-                col = index[1][0]
+                index = [i for i in range(len(temp[0])) if strips_of_orbit[temp[0][i], temp[1][i], 0] == min(strips_of_orbit[temp[0], temp[1], 0])]
+                row = temp[0][index[0]]
+                col = temp[1][index[0]]
 
         plan_st = strips_of_orbit[row, col, 0]
         plan_end = strips_of_orbit[row, col, 1]
@@ -539,19 +541,6 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
     return survey, strips_of_orbit
 
 
-# def update_survey(survey: dict, plan_st: int, plan_end: int, plan_wave: int, plan0: int, plan_end_pre: int) -> tuple(dict, int, int):
-#
-#     survey['strip'].append([plan_st, plan_end, plan_wave])
-#     survey['number'] += 1
-#     survey['inter'].append(plan_st - plan_end_pre - 1)
-#     plan_end_pre = plan_end
-#     plan_wave_pre = plan_wave
-#     survey['time'] += plan_end - plan_st + 1
-#     survey['boot'] += plan_end - plan0 + 1
-#
-#     return survey, plan_end_pre, plan_wave_pre
-
-
 def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict) -> tuple[dict, np.ndarray]:
     """
     Function that plans the boot-ups.
@@ -637,6 +626,40 @@ def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict) -> tuple[dic
     return boot_build, survey_total_array
 
 
+def check_constraints(orbit_plan: np.ndarray, dataset: dict) -> bool:
+    """
+    Check if the plan for the surveys go in line with the constraints.
+
+    Args:
+        orbit_plan: np.ndarray, the plan for the surveys.
+        dataset: dict, all the data needed for task allocation, in this function, mainly use the constraints for survey.
+
+    Returns:
+        bool, True if the plan goes in line with the constraints, False otherwise.
+
+    """
+
+    orbit_num, cycle_num = orbit_plan.shape
+
+    for orbit in range(orbit_num):
+        for cycle in range(cycle_num):
+            if type(orbit_plan[orbit, cycle]) is not list:
+                if orbit_plan[orbit, cycle].shape[0] > dataset['boot_num_max']:
+                    return False
+                for i in range(orbit_plan[orbit, cycle].shape[0]):
+                    if orbit_plan[orbit, cycle][i, 3] == -1:
+                        continue
+                    if orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 > dataset['boot_time_max'] or orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 < dataset['boot_time_min']:
+                        print(orbit, cycle, i)
+                        print(orbit_plan[orbit, cycle][i])
+                        return False
+                    if i != 0:
+                        if orbit_plan[orbit, cycle][i, 1] - orbit_plan[orbit, cycle][i - 1, 2] - 1 <dataset['boot_inter']:
+                            return False
+
+    return True
+
+
 def evaluator(dataset: dict) -> float:
     """
     Function to evaluate the performance of the generated algorithm. Basically we run the task allocation algorithm and compare the results with that of the original algorithm.
@@ -650,130 +673,17 @@ def evaluator(dataset: dict) -> float:
 
     """
 
-    grid_data = sio.loadmat(dataset['grid_path'] + dataset['task_name'] + '.mat')
-    grid_data = np.array(grid_data['gridData'])
+    cycle_num, total_time, orbit_plan = main(dataset)
 
-    # Connect the grids and form the strips
-    grid_data_cont = point2strip(grid_data)
-    strip_cont = strip2strip_cont(grid_data_cont, dataset['survey_time_min'], dataset['boot_time_min'])
+    # if the planning is in valid
+    if cycle_num == 0:
+        return -10000
 
-    # get the total number of orbits and wave
-    orbit_num, wave_num = strip_cont.shape
+    # if the plan breaks the constraints
+    if not check_constraints(orbit_plan, dataset):
+        return -10000
 
-    # Initialize the orbit plan and survey plan
-    orbit_plan = [[] for _ in range(orbit_num)]
-    survey_plan = [[] for _ in range(orbit_num)]
-
-    # Extract the ascending and descending orbit identification
-    ad = np.zeros((orbit_num,), dtype=int)
-    for orbit in tqdm(range(orbit_num)):
-        for wave in range(wave_num):
-            if len(strip_cont[orbit, wave]):
-                ad[orbit] = strip_cont[orbit, wave][0][2]
-
-    # Planning orbit by orbit
-    for orbit in tqdm(range(orbit_num)):
-        strips = strip_cont[orbit]
-        # In each wave, there can be more than one strip, we need to extract all the strips in each wave.
-        row_num = max(max(len(wave) for wave in strips), 1)
-        # Put all the strips in one wave together.
-        # The strip_of_orbit is a 3D array, with the size of (row_num, wave_num, 3), and is the basis of planning.
-        strip_of_orbit = [[] for _ in range(row_num)]
-        for row in range(row_num):
-            for wave in range(wave_num):
-                try:
-                    strip_of_orbit[row].append(list(strips[wave][row]))
-                except IndexError:
-                    strip_of_orbit[row].append([np.inf] * 3)
-        strip_of_orbit = np.array(strip_of_orbit)
-        for i in range(strip_of_orbit.shape[0]):
-            for j in range(strip_of_orbit.shape[1]):
-                # If the strip is not empty, set the wave number.
-                if strip_of_orbit[i, j, 0] != np.inf:
-                    strip_of_orbit[i, j, 2] = j + 1
-
-        # Make sure the digital type of the array align with the np.inf
-        if strip_of_orbit.dtype == np.dtype('int32'):
-            strip_of_orbit = strip_of_orbit.astype('float64')
-
-        # Find the all possible surveys in this orbit
-        survey_total = []
-        while True:
-            survey, strips = survey_boot_build(strip_of_orbit, dataset)
-            if len(survey['strip']):
-                survey['start'] = survey['strip'][0][0]
-                survey['end'] = survey['strip'][survey['number'] - 1][1]
-                survey_total.append(survey)
-            else:
-                break
-
-        survey_total_array = np.zeros((len(survey_total), 6))
-        for i in range(len(survey_total)):
-            survey_total_array[i, 0] = i
-            survey_total_array[i, 1] = survey_total[i]['start']
-            survey_total_array[i, 2] = survey_total[i]['end']
-            survey_total_array[i, 3] = survey_total[i]['number']
-            survey_total_array[i, 4] = survey_total[i]['time']
-            survey_total_array[i, 5] = survey_total_array[i, 2] - survey_total_array[i, 1]
-
-        orbit_total = []
-        while True:
-            boot_build, survey_total_array = boot_orbit_build(survey_total_array, dataset)
-            if boot_build['strip']:
-                boot_build['start'] = boot_build['strip'][0][1]
-                boot_build['end'] = boot_build['strip'][boot_build['boot_num'] - 1][2]
-                orbit_total.append(boot_build)
-            else:
-                break
-
-        survey_plan[orbit] = [[] for _ in range(len(orbit_total))]
-        # 遍历重访周期
-        for k in range(len(orbit_total)):
-            orbit_strip = np.array(orbit_total[k]['strip'], dtype=int)
-            orbit_plan[orbit].append([orbit_strip[:, :3], ad[orbit]])
-            no = orbit_strip[:, 0]
-
-            for p in no:
-                strip_p = np.array(survey_total[p]['strip'], dtype=int)
-                strip_p = np.hstack((strip_p, np.ones((strip_p.shape[0], 1)) * ad[orbit]))
-                survey_plan[orbit][k].append(strip_p)
-
-            survey_plan[orbit][k] = np.vstack((survey_plan[orbit][k][:]))
-
-    survey_plan = np.array(survey_plan, dtype=object)
-    orbit_plan = np.array(orbit_plan, dtype=object)
-
-    no_a = np.where(ad[:] == 1)
-    orbit_num = survey_plan.size
-    col_num = max(len(orbit_plan[i]) for i in range(orbit_num))
-    orbit_plan_array = np.empty((orbit_num, col_num), dtype=object)
-    orbit_plan_array.fill([])
-    for i in range(orbit_num):
-        for j in range(len(orbit_plan[i])):
-            strips = orbit_plan[i][j][0]
-            strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbit_plan[i][j][1]))
-            strips = strips.astype(int)
-            orbit_plan_array[i][j] = strips
-
-    cycle_num = max(len(survey_plan[i]) for i in range(orbit_num))
-    survey_plan_array = np.empty((orbit_num, cycle_num), dtype=object)
-    survey_plan_array.fill([])
-    for i in range(orbit_num):
-        for j in range(len(survey_plan[i])):
-            strips = survey_plan[i][j]
-            strips = strips.astype(int)
-            survey_plan_array[i][j] = strips
-
-    time_total = np.zeros(cycle_num)
-    for k in range(cycle_num):
-        for i in range(len(no_a[0])):
-            a = no_a[0][i]
-            if type(survey_plan_array[a, k]) is not list:
-                time_total[k] += sum(survey_plan_array[a, k][:, 1] - survey_plan_array[a, k][:, 0] + 1)
-            else:
-                continue
-
-    score = -((cycle_num - 30) / 30 * 70 + (sum(time_total) - 44927) / 44927 * 30)
+    score = -((cycle_num - 30) * 70 + (total_time - 44936) * 30)
 
     return score
 
