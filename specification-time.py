@@ -773,7 +773,7 @@ def evaluator(dataset: dict) -> float:
             else:
                 continue
 
-    score = -((cycle_num - 30) * 70 + (sum(time_total) - 44927) * 30)
+    score = -((cycle_num - 30) / 30 * 70 + (sum(time_total) - 44927) / 44927 * 30)
 
     return score
 
