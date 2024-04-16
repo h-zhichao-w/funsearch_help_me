@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def main(dataset: dict) -> tuple[int, int]:
+def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
     """
     Main function for task allocation for the Strict Return to Orbit (SRO) satellites.
     All the parameters related with time are given in the unit of seconds.
@@ -166,10 +166,10 @@ def main(dataset: dict) -> tuple[int, int]:
             else:
                 continue
 
-    print(time_total)
-    print(sum(time_total))
+    # print(time_total)
+    # print(sum(time_total))
 
-    return cycle_num, sum(time_total)
+    return cycle_num, sum(time_total), orbit_plan_array, survey_plan_array
 
 
 def point2strip(grid_data: np.ndarray) -> np.ndarray:
