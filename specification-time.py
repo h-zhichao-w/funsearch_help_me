@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def main(dataset: dict) -> tuple[int, int, np.ndarray]:
+def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
     """
     Main function for task allocation for the Strict Return to Orbit (SRO) satellites.
     All the parameters related with time are given in the unit of seconds.
@@ -165,7 +165,7 @@ def main(dataset: dict) -> tuple[int, int, np.ndarray]:
     print(time_total)
     print(sum(time_total))
 
-    return cycle_num, sum(time_total), orbit_plan_array
+    return cycle_num, sum(time_total), orbit_plan_array, survey_plan_array
 
 
 def point2strip(grid_data: np.ndarray) -> np.ndarray:
@@ -388,15 +388,10 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                     else:
                         break
 
-                # 任务持续时间大于等于最小持续时间
                 else:
-                    # 当前条带结束满足最大开机时长的约束
                     if plan_end - plan0 + 1 <= dataset['boot_time_max']:
-                        # 满足累计成像时长约束
                         if survey['time'] + plan_end - plan_st + 1 <= dataset['survey_boot_time_max']:
-                            # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= dataset['survey_time_max']:
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -409,7 +404,6 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                             else:
                                 plan_end = plan_st + dataset['survey_time_max'] - 1
                                 strips_of_orbit[row, col, 0] = plan_end + 1
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -418,13 +412,11 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                                 survey['time'] += plan_end - plan_st + 1
                                 survey['boot'] += plan_end - plan0 + 1
                                 continue
-                        # 超出累计成像时长约束
+
                         else:
                             plan_end = plan_st + dataset['survey_boot_time_max'] - survey['time'] - 1
                             strips_of_orbit[row, col, 0] = plan_end + 1
-                            # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= dataset['survey_time_max']:
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -435,7 +427,6 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                             else:
                                 plan_end = plan_st + dataset['survey_time_max'] - 1
                                 strips_of_orbit[row, col, 0] = plan_end + 1
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -445,15 +436,11 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                                 survey['boot'] += plan_end - plan0 + 1
                                 continue
 
-                    # 部分满足最大开机时长
                     elif plan_end - plan0 + 1 > dataset['boot_time_max'] >= plan_st - plan0:
                         plan_end = plan0 + dataset['boot_time_max'] - 1
                         strips_of_orbit[row, col, 0] = plan_end + 1
-                        # 满足累计成像时长约束
                         if survey['time'] + plan_end - plan_st + 1 <= dataset['survey_boot_time_max']:
-                            # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= dataset['survey_time_max']:
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -465,7 +452,6 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                             else:
                                 plan_end = plan_st + dataset['survey_time_max'] - 1
                                 strips_of_orbit[row, col, 0] = plan_end + 1
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -478,9 +464,7 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                         else:
                             plan_end = plan_st + dataset['survey_boot_time_max'] - survey['time'] - 1
                             strips_of_orbit[row, col, 0] = plan_end + 1
-                            # 满足最大成像时长约束
                             if plan_end - plan_st + 1 <= dataset['survey_time_max']:
-                                # 记录条带
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
                                 survey['inter'].append(plan_st - plan_end_pre - 1)
@@ -491,7 +475,6 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                                 continue
                             else:
                                 plan_end = plan_st + dataset['survey_time_max'] - 1
-                                # 记录条带
                                 strips_of_orbit[row, col, 0] = plan_end + 1
                                 survey['strip'].append([plan_st, plan_end, plan_wave])
                                 survey['number'] += 1
@@ -502,7 +485,7 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
                                 survey['boot'] += plan_end - plan0 + 1
                                 continue
 
-                    # 不满足最大开机时长
+
                     else:
                         break
 
@@ -626,12 +609,13 @@ def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict) -> tuple[dic
     return boot_build, survey_total_array
 
 
-def check_constraints(orbit_plan: np.ndarray, dataset: dict) -> bool:
+def check_constraints(orbit_plan: np.ndarray, survey_plan: np.ndarray, dataset: dict) -> bool:
     """
     Check if the plan for the surveys go in line with the constraints.
 
     Args:
-        orbit_plan: np.ndarray, the plan for the surveys.
+        orbit_plan: np.ndarray, the plan for the boot-ups in orbit.
+        survey_plan: np.ndarray, the plan for the surveys.
         dataset: dict, all the data needed for task allocation, in this function, mainly use the constraints for survey.
 
     Returns:
@@ -641,23 +625,58 @@ def check_constraints(orbit_plan: np.ndarray, dataset: dict) -> bool:
 
     orbit_num, cycle_num = orbit_plan.shape
 
+    flag = False
+
     for orbit in range(orbit_num):
         for cycle in range(cycle_num):
             if type(orbit_plan[orbit, cycle]) is not list:
                 if orbit_plan[orbit, cycle].shape[0] > dataset['boot_num_max']:
-                    return False
+                    print('Exceed the limit of number of boot-ups in one orbit.')
+                    flag = True
                 for i in range(orbit_plan[orbit, cycle].shape[0]):
                     if orbit_plan[orbit, cycle][i, 3] == -1:
                         continue
                     if orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 > dataset['boot_time_max'] or orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 < dataset['boot_time_min']:
+                        print('The lasting time of the following boot-up does not satisfy the requirement.')
                         print(orbit, cycle, i)
                         print(orbit_plan[orbit, cycle][i])
-                        return False
+                        flag = True
                     if i != 0:
                         if orbit_plan[orbit, cycle][i, 1] - orbit_plan[orbit, cycle][i - 1, 2] - 1 <dataset['boot_inter']:
-                            return False
+                            print('The interval of the following boot-ups does not satisfy the requirement.')
+                            print(orbit, cycle, i)
+                            print(orbit_plan[orbit, cycle][i - 1])
+                            print(orbit_plan[orbit, cycle][i])
+                            flag = True
 
-    return True
+    print('Orbit plan checked')
+
+    for orbit in range(orbit_num):
+        for cycle in range(cycle_num):
+            if type(survey_plan[orbit, cycle]) is not list:
+                if survey_plan[orbit, cycle].shape[0] > dataset['survey_orbit_num_max']:
+                    print('Exceed the limit of number of surveys in one orbit.')
+                    flag = True
+                for i in range(survey_plan[orbit, cycle].shape[0]):
+                    if survey_plan[orbit, cycle][i, 3] == -1:
+                        continue
+                    if survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] + 1 > dataset['survey_time_max'] or survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] + 1 < dataset['survey_time_min']:
+                        print('The lasting time of the following survey does not satisfy the requirement.')
+                        print(orbit, cycle, i)
+                        print(survey_plan[orbit, cycle][i])
+                        flag = True
+                    if i != 0:
+                        if (survey_plan[orbit, cycle][i, 2] == survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] - 1 <dataset['survey_inter_same']) or (survey_plan[orbit, cycle][i, 2] != survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] - 1 <dataset['survey_inter_diff']):
+                            print('The interval of the following surveys does not satisfy the requirement.')
+                            print(orbit, cycle, i)
+                            print(survey_plan[orbit, cycle][i - 1])
+                            print(survey_plan[orbit, cycle][i])
+                            flag = True
+
+    if flag:
+        return False
+    else:
+        return True
 
 
 def evaluator(dataset: dict) -> float:
@@ -673,14 +692,14 @@ def evaluator(dataset: dict) -> float:
 
     """
 
-    cycle_num, total_time, orbit_plan = main(dataset)
+    cycle_num, total_time, orbit_plan, survey_plan = main(dataset)
 
     # if the planning is in valid
     if cycle_num == 0:
         return -10000
 
     # if the plan breaks the constraints
-    if not check_constraints(orbit_plan, dataset):
+    if not check_constraints(orbit_plan, survey_plan, dataset):
         return -10000
 
     score = -((cycle_num - 30) * 70 + (total_time - 44936) * 30)
@@ -707,5 +726,6 @@ dataset = {
 }
 
 if __name__ == "__main__":
-    main(dataset)
+    cycle_num, total_time, orbit_plan, survey_plan = main(dataset)
     print(evaluator(dataset))
+
