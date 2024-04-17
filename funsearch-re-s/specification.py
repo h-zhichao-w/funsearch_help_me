@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
+def main(dataset: dict) -> tuple[int, np.ndarray]:
     """
     Main function for task allocation for the Strict Return to Orbit (SRO) satellites.
     All the parameters related with time are given in the unit of seconds.
@@ -31,9 +31,9 @@ def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
             dataset['survey_inter_diff']: int, the minimum interval between two surveys that are in different waves.
 
     Returns:
-        tuple[int, int], the total cycles and time taken to complete all tasks.
-            cycle: int, the total cycles taken. A cycle is defined as the satellite passing through all the orbits in one revisiting period, and starting to revisit the same orbits agian.
-            time: int, the total time taken.
+        tuple[int, np.ndarray], the total cycles and time taken to complete all tasks.
+            cycle_num: int, the total cycles taken. A cycle is defined as the satellite passing through all the orbits in one revisiting period, and starting to revisit the same orbits agian.
+            survey_plan: np.ndarray, a (orbit_num, cycle_num) array.
     """
 
     # Load the grid data from mat file
@@ -59,6 +59,7 @@ def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
                 ad[orbit] = strip_cont[orbit, wave][0][2]
 
     # Planning orbit by orbit
+    survey_plan = np.array([], dtype=object)
     for orbit in tqdm(range(orbit_num)):
         strips = strip_cont[orbit]
         # In each wave, there can be more than one strip, we need to extract all the strips in each wave.
@@ -83,93 +84,96 @@ def main(dataset: dict) -> tuple[int, int, np.ndarray, np.ndarray]:
         if strip_of_orbit.dtype == np.dtype('int32'):
             strip_of_orbit = strip_of_orbit.astype('float64')
 
-        # Find the all possible surveys in this orbit
-        survey_total = []
-        while True:
-            survey, strips = survey_boot_build(strip_of_orbit, dataset)
-            if len(survey['strip']):
-                survey['start'] = survey['strip'][0][0]
-                survey['end'] = survey['strip'][survey['number'] - 1][1]
-                survey_total.append(survey)
+        survey_total_array, strip_of_orbit = survey_boot_build(strip_of_orbit, dataset)
+        if not np.isinf(strip_of_orbit).all():
+            print('Not all strips are set. Incorrect planning.')
+            return -1, np.array([])
+        else:
+            if orbit == 0:
+                survey_plan = survey_total_array
+                survey_plan = survey_plan.reshape((1, survey_plan.shape[0]))
             else:
-                break
+                if survey_plan.shape[1] == survey_total_array.shape[0]:
+                    survey_plan = np.vstack((survey_plan, survey_total_array))
+                elif survey_plan.shape[1] < survey_total_array.shape[0]:
+                    supplement = np.empty((survey_plan.shape[0], survey_total_array.shape[0] - survey_plan.shape[1]), dtype=object)
+                    supplement.fill(np.array([]))
+                    survey_plan = np.hstack((survey_plan, supplement))
+                    survey_plan = np.vstack((survey_plan, survey_total_array))
+                else:
+                    supplement = np.empty((survey_plan.shape[1] - survey_total_array.shape[0], ), dtype=object)
+                    supplement.fill(np.array([]))
+                    survey_plan = np.vstack((survey_plan, survey_total_array))
 
-        survey_total_array = np.zeros((len(survey_total), 6))
-        for i in range(len(survey_total)):
-            survey_total_array[i, 0] = i
-            survey_total_array[i, 1] = survey_total[i]['start']
-            survey_total_array[i, 2] = survey_total[i]['end']
-            survey_total_array[i, 3] = survey_total[i]['number']
-            survey_total_array[i, 4] = survey_total[i]['time']
-            survey_total_array[i, 5] = survey_total_array[i, 2] - survey_total_array[i, 1]
+        # You don't need to consider it now.
+        # orbit_total = []
+        # while True:
+        #     boot_build, survey_total_array = boot_orbit_build(survey_total_array, dataset)
+        #     if boot_build['strip']:
+        #         boot_build['start'] = boot_build['strip'][0][1]
+        #         boot_build['end'] = boot_build['strip'][boot_build['boot_num'] - 1][2]
+        #         orbit_total.append(boot_build)
+        #     else:
+        #         break
+        #
+        # survey_plan[orbit] = [[] for _ in range(len(orbit_total))]
+        # # plan cycle by cycle
+        # for k in range(len(orbit_total)):
+        #     orbit_strip = np.array(orbit_total[k]['strip'], dtype=int)
+        #     orbit_plan[orbit].append([orbit_strip[:, :3], ad[orbit]])
+        #     no = orbit_strip[:, 0]
+        #
+        #     for p in no:
+        #         strip_p = np.array(survey_total[p]['strip'], dtype=int)
+        #         strip_p = np.hstack((strip_p, np.ones((strip_p.shape[0], 1)) * ad[orbit]))
+        #         survey_plan[orbit][k].append(strip_p)
+        #
+        #     survey_plan[orbit][k] = np.vstack((survey_plan[orbit][k][:]))
 
-        orbit_total = []
-        while True:
-            boot_build, survey_total_array = boot_orbit_build(survey_total_array, dataset)
-            if boot_build['strip']:
-                boot_build['start'] = boot_build['strip'][0][1]
-                boot_build['end'] = boot_build['strip'][boot_build['boot_num'] - 1][2]
-                orbit_total.append(boot_build)
-            else:
-                break
+    # survey_plan = np.array(survey_plan, dtype=object)
+    # orbit_plan = np.array(orbit_plan, dtype=object)
+    #
+    # no_a = np.where(ad[:] == 1)
+    # orbit_num = survey_plan.size
+    # try:
+    #     col_num = max(len(orbit_plan[i]) for i in range(orbit_num))
+    # except:
+    #     col_num = 0
+    # orbit_plan_array = np.empty((orbit_num, col_num), dtype=object)
+    # orbit_plan_array.fill([])
+    # for i in range(orbit_num):
+    #     for j in range(len(orbit_plan[i])):
+    #         strips = orbit_plan[i][j][0]
+    #         strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbit_plan[i][j][1]))
+    #         strips = strips.astype(int)
+    #         orbit_plan_array[i][j] = strips
+    #
+    # try:
+    #     cycle_num = max(len(survey_plan[i]) for i in range(orbit_num))
+    # except:
+    #     cycle_num = 0
+    # survey_plan_array = np.empty((orbit_num, cycle_num), dtype=object)
+    # survey_plan_array.fill([])
+    # for i in range(orbit_num):
+    #     for j in range(len(survey_plan[i])):
+    #         strips = survey_plan[i][j]
+    #         strips = strips.astype(int)
+    #         survey_plan_array[i][j] = strips
 
-        survey_plan[orbit] = [[] for _ in range(len(orbit_total))]
-        # plan cycle by cycle
-        for k in range(len(orbit_total)):
-            orbit_strip = np.array(orbit_total[k]['strip'], dtype=int)
-            orbit_plan[orbit].append([orbit_strip[:, :3], ad[orbit]])
-            no = orbit_strip[:, 0]
-
-            for p in no:
-                strip_p = np.array(survey_total[p]['strip'], dtype=int)
-                strip_p = np.hstack((strip_p, np.ones((strip_p.shape[0], 1)) * ad[orbit]))
-                survey_plan[orbit][k].append(strip_p)
-
-            survey_plan[orbit][k] = np.vstack((survey_plan[orbit][k][:]))
-
-    survey_plan = np.array(survey_plan, dtype=object)
-    orbit_plan = np.array(orbit_plan, dtype=object)
-
-    no_a = np.where(ad[:] == 1)
-    orbit_num = survey_plan.size
-    try:
-        col_num = max(len(orbit_plan[i]) for i in range(orbit_num))
-    except:
-        col_num = 0
-    orbit_plan_array = np.empty((orbit_num, col_num), dtype=object)
-    orbit_plan_array.fill([])
-    for i in range(orbit_num):
-        for j in range(len(orbit_plan[i])):
-            strips = orbit_plan[i][j][0]
-            strips = np.hstack((strips, np.ones((strips.shape[0], 1)) * orbit_plan[i][j][1]))
-            strips = strips.astype(int)
-            orbit_plan_array[i][j] = strips
-
-    try:
-        cycle_num = max(len(survey_plan[i]) for i in range(orbit_num))
-    except:
-        cycle_num = 0
-    survey_plan_array = np.empty((orbit_num, cycle_num), dtype=object)
-    survey_plan_array.fill([])
-    for i in range(orbit_num):
-        for j in range(len(survey_plan[i])):
-            strips = survey_plan[i][j]
-            strips = strips.astype(int)
-            survey_plan_array[i][j] = strips
-
-    time_total = np.zeros(cycle_num)
-    for k in range(cycle_num):
-        for i in range(len(no_a[0])):
-            a = no_a[0][i]
-            if type(survey_plan_array[a, k]) is not list:
-                time_total[k] += sum(survey_plan_array[a, k][:, 1] - survey_plan_array[a, k][:, 0] + 1)
-            else:
-                continue
+    cycle_num = survey_plan.shape[1]
+    # time_total = np.zeros(cycle_num)
+    # for k in range(cycle_num):
+    #     for i in range(len(no_a[0])):
+    #         a = no_a[0][i]
+    #         if type(survey_plan_array[a, k]) is not list:
+    #             time_total[k] += sum(survey_plan_array[a, k][:, 1] - survey_plan_array[a, k][:, 0] + 1)
+    #         else:
+    #             continue
 
     # print(time_total)
     # print(sum(time_total))
 
-    return cycle_num, sum(time_total), orbit_plan_array, survey_plan_array
+    return cycle_num, survey_plan
 
 
 def point2strip(grid_data: np.ndarray) -> np.ndarray:
@@ -268,12 +272,13 @@ def strip2strip_cont(grid_data_cont: np.ndarray, survey_time_min: int, boot_time
 
 
 @funsearch.evolve
-def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict, np.ndarray]:
+def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[np.ndarray, np.ndarray]:
     """
     Function that plans the surveys.
-    In this function, you are given the array which contains the strips of the given strip. Each strip will has the information of starting time, ending time and wave number.
-    The function will plan the surveys based on the constraints. A survey is a conduct of one or more strips.
-    The only requirement is that the total time should be as short as possible.
+    In this function, you are given the array which contains the strips of the given strip. The array will be in (x, 8, 3). Each strip is a (3,) array, containing the start, end and wave number of the strip. 8 means in total there are 8 types of wave number. x is for maintaining the shape of the array, because the number of strips in each wave can be different. If you find a strip that is [inf, inf, inf], it means that the strip is empty, you do not need to consider it.
+    You need to return the survey plan, which is a (y,) array. y is the number of cycles taken. Imagine that each cycle is a container and each strip is an item. You need to put the strips into the container. The container can hold up to dataset['survey_boot_num_max'] strips. The total time of the strips in the container should not exceed dataset['survey_boot_time_max']. The interval between two strips in the same wave should be at least dataset['survey_inter_same']. The interval between two strips in different waves should be at least dataset['survey_inter_diff']. Also, check if the strips satisfy dataset['survey_time_max'] and dataset['survey_time_min'].
+    You will be given all the items, i.e. strips, in one time, which means this is an offline planning. You should put all the items in the containers without missing. The strip you have set in the survey plan should be set as inf in the strips_of_orbit to prevent from being arranged again.
+    The only requirement is that the number of containers taken, i.e. the number of cycles taken, should be as small as possible.
     One tip is that the interval between two strips in the same wave is smaller than that between two strips in different waves.
 
     Args:
@@ -294,38 +299,14 @@ def survey_boot_build(strips_of_orbit: np.ndarray, dataset: dict) -> tuple[dict,
             dataset['survey_inter_diff']: int, the minimum interval between two surveys that are in different waves.
 
     Returns:
-        survey: dict, the survey plan.
-            survey['strip']: list, the strips in the survey.
-            survey['number']: int, the number of strips in the survey.
-            survey['inter']: list, the intervals between strips of the survey.
-            survey['time']: int, the total time taken for the survey.
-            survey['boot']: int, the total time of boot-ups.
+        surve_plan: 1D array, the survey plan, each element of which is an emtpy array or 2D array. It shows how the strips are arranged in different cycles. If the element is an empty array, it means that no strip is arranged in this cycle, otherwise, it is a 2D array, the size is (number of strips, 3), each row of the array is a strip, containing the start, end and wave number of the strip.
         strips_of_orbit: 3D array, the updated strips of the orbit, the arranged strips will be set as inf to prevent from being arranged again.
     """
 
-    # Initialize the dict for recording the survey
-    survey = {
-        'strip': [],    # The strips in the survey
-        'number': 0,    # The number of strips in the survey
-        'inter': [],    # The intervals between two strips
-        'time': 0,      # The total time taken for the survey
-        'boot': 0       # The total time of boot-ups
-    }
+    survey_plan = np.array([], dtype=object)
 
-    # Initialization
-    plan_st = 0
-    plan_end = 0
-    plan_wave = 0
-    plan_end_pre = 0
-    plan_wave_pre = 0
-    plan0 = 0
-    row = 0
-    col = 0
 
-    # Tips: use `while not np.isinf(strips_of_orbit).all():` to check if all the strips in this orbit has been arranged
-    # From here should the algorithm be made to realize the planning.
-
-    return survey, strips_of_orbit
+    return survey_plan, strips_of_orbit
 
 
 def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict) -> tuple[dict, np.ndarray]:
@@ -413,12 +394,11 @@ def boot_orbit_build(survey_total_array: np.ndarray, dataset: dict) -> tuple[dic
     return boot_build, survey_total_array
 
 
-def check_constraints(orbit_plan: np.ndarray, survey_plan: np.ndarray, dataset: dict) -> bool:
+def check_constraints(survey_plan: np.ndarray, dataset: dict) -> bool:
     """
     Check if the plan for the surveys go in line with the constraints.
 
     Args:
-        orbit_plan: np.ndarray, the plan for the boot-ups in orbit.
         survey_plan: np.ndarray, the plan for the surveys.
         dataset: dict, all the data needed for task allocation, in this function, mainly use the constraints for survey.
 
@@ -427,50 +407,54 @@ def check_constraints(orbit_plan: np.ndarray, survey_plan: np.ndarray, dataset: 
 
     """
 
-    orbit_num, cycle_num = orbit_plan.shape
+    if survey_plan.size:
+        return False
+
+    orbit_num, cycle_num = survey_plan.shape
 
     flag = False
 
+    # You don't need to consider it now.
+    # for orbit in range(orbit_num):
+    #     for cycle in range(cycle_num):
+    #         if type(orbit_plan[orbit, cycle]) is not list:
+    #             if orbit_plan[orbit, cycle].shape[0] > dataset['boot_num_max']:
+    #                 print('Exceed the limit of number of boot-ups in one orbit.')
+    #                 flag = True
+    #             for i in range(orbit_plan[orbit, cycle].shape[0]):
+    #                 if orbit_plan[orbit, cycle][i, 3] == -1:
+    #                     continue
+    #                 if orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] > dataset['boot_time_max'] or orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] < dataset['boot_time_min']:
+    #                     print('The lasting time of the following boot-up does not satisfy the requirement.')
+    #                     print(orbit, cycle, i)
+    #                     print(orbit_plan[orbit, cycle][i])
+    #                     flag = True
+    #                 if i != 0:
+    #                     if orbit_plan[orbit, cycle][i, 1] - orbit_plan[orbit, cycle][i - 1, 2] < dataset['boot_inter']:
+    #                         print('The interval of the following boot-ups does not satisfy the requirement.')
+    #                         print(orbit, cycle, i)
+    #                         print(orbit_plan[orbit, cycle][i - 1])
+    #                         print(orbit_plan[orbit, cycle][i])
+    #                         flag = True
+    #
+    # print('Orbit plan checked')
+
     for orbit in range(orbit_num):
         for cycle in range(cycle_num):
-            if type(orbit_plan[orbit, cycle]) is not list:
-                if orbit_plan[orbit, cycle].shape[0] > dataset['boot_num_max']:
-                    print('Exceed the limit of number of boot-ups in one orbit.')
-                    flag = True
-                for i in range(orbit_plan[orbit, cycle].shape[0]):
-                    if orbit_plan[orbit, cycle][i, 3] == -1:
-                        continue
-                    if orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 > dataset['boot_time_max'] or orbit_plan[orbit, cycle][i, 2] - orbit_plan[orbit, cycle][i, 1] + 1 < dataset['boot_time_min']:
-                        print('The lasting time of the following boot-up does not satisfy the requirement.')
-                        print(orbit, cycle, i)
-                        print(orbit_plan[orbit, cycle][i])
-                        flag = True
-                    if i != 0:
-                        if orbit_plan[orbit, cycle][i, 1] - orbit_plan[orbit, cycle][i - 1, 2] - 1 <dataset['boot_inter']:
-                            print('The interval of the following boot-ups does not satisfy the requirement.')
-                            print(orbit, cycle, i)
-                            print(orbit_plan[orbit, cycle][i - 1])
-                            print(orbit_plan[orbit, cycle][i])
-                            flag = True
-
-    print('Orbit plan checked')
-
-    for orbit in range(orbit_num):
-        for cycle in range(cycle_num):
-            if type(survey_plan[orbit, cycle]) is not list:
+            if survey_plan[orbit, cycle].size:
                 if survey_plan[orbit, cycle].shape[0] > dataset['survey_orbit_num_max']:
                     print('Exceed the limit of number of surveys in one orbit.')
                     flag = True
                 for i in range(survey_plan[orbit, cycle].shape[0]):
-                    if survey_plan[orbit, cycle][i, 3] == -1:
-                        continue
-                    if survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] + 1 > dataset['survey_time_max'] or survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] + 1 < dataset['survey_time_min']:
+                    # if survey_plan[orbit, cycle][i, 3] == -1:
+                    #     continue
+                    if survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] > dataset['survey_time_max'] or survey_plan[orbit, cycle][i, 1] - survey_plan[orbit, cycle][i, 0] < dataset['survey_time_min']:
                         print('The lasting time of the following survey does not satisfy the requirement.')
                         print(orbit, cycle, i)
                         print(survey_plan[orbit, cycle][i])
                         flag = True
                     if i != 0:
-                        if (survey_plan[orbit, cycle][i, 2] == survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] - 1 <dataset['survey_inter_same']) or (survey_plan[orbit, cycle][i, 2] != survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] - 1 <dataset['survey_inter_diff']):
+                        if (survey_plan[orbit, cycle][i, 2] == survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] < dataset['survey_inter_same']) or (survey_plan[orbit, cycle][i, 2] != survey_plan[orbit, cycle][i - 1, 2] and survey_plan[orbit, cycle][i, 0] - survey_plan[orbit, cycle][i - 1, 1] < dataset['survey_inter_diff']):
                             print('The interval of the following surveys does not satisfy the requirement.')
                             print(orbit, cycle, i)
                             print(survey_plan[orbit, cycle][i - 1])
@@ -497,16 +481,16 @@ def evaluator(dataset: dict) -> float:
 
     """
 
-    cycle_num, total_time, orbit_plan, survey_plan = main(dataset)
+    cycle_num, survey_plan = main(dataset)
 
     # if the planning is in valid
-    if cycle_num == 0:
+    if cycle_num <= 0:
         return -10000
 
     # if the plan breaks the constraints
-    if not check_constraints(orbit_plan, survey_plan, dataset):
+    if not check_constraints(survey_plan, dataset):
         return -10000
 
-    score = -((cycle_num - 30) * 70 + (total_time - 44936) * 30)
+    score = -((cycle_num - 30) / 30) * 100
 
     return score
